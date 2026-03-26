@@ -333,17 +333,22 @@ export class Player {
 
     // ── Camera update ───────────────────────────────────────────────────
     if (this.cameraMode === 3) {
-      // FPS trick: place camera at eye level by pushing target far behind
-      // camera = target + R*(sinβ*cosα, cosβ, sinβ*sinα)  ⇒  target = eye - R*spherical
-      const FPS_R = 200
-      const cam   = this.camera
-      const eyeY  = this.position.y + PLAYER_HEIGHT * 0.85
+      // FPS: camera sits FPS_BACK units behind the eye to avoid terrain clipping on slopes.
+      // camera.position = target + R * spherical
+      // We want camera at: eye + FPS_BACK * spherical (i.e. slightly behind the head)
+      // So: target = eye + FPS_BACK * spherical - FPS_R * spherical
+      //             = eye - (FPS_R - FPS_BACK) * spherical
+      const FPS_R    = 200
+      const FPS_BACK = 1.5
+      const cam  = this.camera
+      const eyeY = this.position.y + PLAYER_HEIGHT * 0.85
       const sb = Math.sin(cam.beta),  cb = Math.cos(cam.beta)
       const sa = Math.sin(cam.alpha), ca = Math.cos(cam.alpha)
+      const eff = FPS_R - FPS_BACK
       cam.target.set(
-        this.position.x - FPS_R * sb * ca,
-        eyeY            - FPS_R * cb,
-        this.position.z - FPS_R * sb * sa,
+        this.position.x - eff * sb * ca,
+        eyeY            - eff * cb,
+        this.position.z - eff * sb * sa,
       )
       cam.radius = FPS_R
     } else {
