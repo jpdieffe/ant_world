@@ -1,0 +1,1 @@
+import{_n as e}from"./index-Df2bcQAm.js";export{e as particlesVertexShaderWGSL};

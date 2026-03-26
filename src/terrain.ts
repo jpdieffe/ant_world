@@ -302,20 +302,45 @@ class TerrainChunk {
     }
   }
 
-  /** Get the density value at a world position */
+  /** Get the density value at a world position (trilinear interpolation) */
   getDensityAt(wx: number, wy: number, wz: number): number {
     const gx = (wx - this.originX) / CELL_SIZE
     const gy = (wy - this.originY) / CELL_SIZE
     const gz = (wz - this.originZ) / CELL_SIZE
 
-    const x = Math.round(gx)
-    const y = Math.round(gy)
-    const z = Math.round(gz)
-
-    if (x < 0 || x >= CHUNK_SAMPLES || y < 0 || y >= VERT_SAMPLES || z < 0 || z >= CHUNK_SAMPLES) {
+    // Outside grid bounds — return sensible default
+    if (gx < -0.5 || gx > CHUNK_SAMPLES - 0.5 ||
+        gz < -0.5 || gz > CHUNK_SAMPLES - 0.5 ||
+        gy < -0.5 || gy > VERT_SAMPLES - 0.5) {
       return wy < 0 ? 1 : -1
     }
-    return this.density[this.idx(x, y, z)]
+
+    const x0 = Math.max(0, Math.min(CHUNK_SAMPLES - 2, Math.floor(gx)))
+    const y0 = Math.max(0, Math.min(VERT_SAMPLES - 2, Math.floor(gy)))
+    const z0 = Math.max(0, Math.min(CHUNK_SAMPLES - 2, Math.floor(gz)))
+
+    const fx = Math.max(0, Math.min(1, gx - x0))
+    const fy = Math.max(0, Math.min(1, gy - y0))
+    const fz = Math.max(0, Math.min(1, gz - z0))
+
+    const d000 = this.density[this.idx(x0, y0, z0)]
+    const d100 = this.density[this.idx(x0 + 1, y0, z0)]
+    const d010 = this.density[this.idx(x0, y0 + 1, z0)]
+    const d110 = this.density[this.idx(x0 + 1, y0 + 1, z0)]
+    const d001 = this.density[this.idx(x0, y0, z0 + 1)]
+    const d101 = this.density[this.idx(x0 + 1, y0, z0 + 1)]
+    const d011 = this.density[this.idx(x0, y0 + 1, z0 + 1)]
+    const d111 = this.density[this.idx(x0 + 1, y0 + 1, z0 + 1)]
+
+    const c00 = d000 + (d100 - d000) * fx
+    const c10 = d010 + (d110 - d010) * fx
+    const c01 = d001 + (d101 - d001) * fx
+    const c11 = d011 + (d111 - d011) * fx
+
+    const c0 = c00 + (c10 - c00) * fy
+    const c1 = c01 + (c11 - c01) * fy
+
+    return c0 + (c1 - c0) * fz
   }
 
   /** Helper: find exact surface Y for a single density column (top-down scan) */

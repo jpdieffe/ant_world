@@ -16,10 +16,13 @@ import type { AnimState, PlayerState } from './types'
 const GRAVITY       = -28
 const JUMP_VELOCITY = 14
 const MOVE_SPEED    = 8
-const PLAYER_HEIGHT = 1.2
-const PLAYER_RADIUS = 0.4
-const TERMINAL_VEL  = -30
-const ANT_SCALE     = 2.16
+const PLAYER_HEIGHT  = 1.2
+const PLAYER_RADIUS  = 0.4
+const TERMINAL_VEL   = -30
+const STEP_HEIGHT    = 2.0    // max terrain rise the player can walk up
+const GROUND_SNAP    = 0.05   // tiny offset above surface when grounded
+const FALL_THRESHOLD = 3.0    // surface must drop more than this to trigger falling
+const ANT_SCALE      = 2.16
 
 // ── Camera constants ─────────────────────────────────────────────────────────
 const CAM_DEFAULT_RADIUS = 14
@@ -250,57 +253,89 @@ export class Player {
       this.onGround = false
     }
 
-    // ── Gravity ────────────────────────────────────────────────────────────
-    this.velocity.y += GRAVITY * dt
-    if (this.velocity.y < TERMINAL_VEL) this.velocity.y = TERMINAL_VEL
+    if (this.onGround) {
+      // ── GROUNDED: surface-following movement ────────────────────────────
+      const searchFromY = this.position.y + STEP_HEIGHT + PLAYER_HEIGHT
+      const chestY = this.position.y + PLAYER_HEIGHT * 0.7
 
-    // ── Move position (split axes to prevent entering solid terrain) ───────
-    // Apply Y first (gravity / jump)
-    this.position.y += this.velocity.y * dt
+      // Try X movement (allows wall-sliding when blocked diagonally)
+      let newX = this.position.x
+      const tryX = this.position.x + this.velocity.x * dt
+      if (!this.terrain.isSolid(tryX, chestY, this.position.z)) {
+        const surf = this.terrain.getSurfaceYBelow(tryX, this.position.z, searchFromY)
+        if (surf - this.position.y <= STEP_HEIGHT) newX = tryX
+      }
 
-    // Apply X — check at knee and mid-body before committing
-    // Use knee height (0.45) so small slopes are walkable
-    const newX = this.position.x + this.velocity.x * dt
-    const solidAtKneeX = this.terrain.isSolid(newX, this.position.y + 0.45, this.position.z)
-    const solidAtMidX  = this.terrain.isSolid(newX, this.position.y + PLAYER_HEIGHT * 0.5, this.position.z)
-    if (!solidAtKneeX && !solidAtMidX) {
+      // Try Z movement
+      let newZ = this.position.z
+      const tryZ = this.position.z + this.velocity.z * dt
+      if (!this.terrain.isSolid(newX, chestY, tryZ)) {
+        const surf = this.terrain.getSurfaceYBelow(newX, tryZ, searchFromY)
+        if (surf - this.position.y <= STEP_HEIGHT) newZ = tryZ
+      }
+
       this.position.x = newX
-    } else {
-      this.velocity.x = 0
-    }
-
-    // Apply Z — check at knee and mid-body before committing
-    const newZ = this.position.z + this.velocity.z * dt
-    const solidAtKneeZ = this.terrain.isSolid(this.position.x, this.position.y + 0.45, newZ)
-    const solidAtMidZ  = this.terrain.isSolid(this.position.x, this.position.y + PLAYER_HEIGHT * 0.5, newZ)
-    if (!solidAtKneeZ && !solidAtMidZ) {
       this.position.z = newZ
+
+      // Snap to surface at the new position
+      const destSurfY = this.terrain.getSurfaceYBelow(newX, newZ, searchFromY)
+      if (this.position.y - destSurfY > FALL_THRESHOLD) {
+        // Ground fell away (dug out or cliff edge) — start falling
+        this.onGround = false
+        this.velocity.y = 0
+      } else {
+        this.position.y = destSurfY + GROUND_SNAP
+      }
+
     } else {
-      this.velocity.z = 0
+      // ── AIRBORNE: gravity-based physics ─────────────────────────────────
+      this.velocity.y += GRAVITY * dt
+      if (this.velocity.y < TERMINAL_VEL) this.velocity.y = TERMINAL_VEL
+      this.position.y += this.velocity.y * dt
+
+      // Horizontal movement with wall collision
+      const newX = this.position.x + this.velocity.x * dt
+      if (!this.terrain.isSolid(newX, this.position.y + PLAYER_HEIGHT * 0.5, this.position.z)) {
+        this.position.x = newX
+      } else {
+        this.velocity.x = 0
+      }
+      const newZ = this.position.z + this.velocity.z * dt
+      if (!this.terrain.isSolid(this.position.x, this.position.y + PLAYER_HEIGHT * 0.5, newZ)) {
+        this.position.z = newZ
+      } else {
+        this.velocity.z = 0
+      }
+
+      // Landing check
+      const surfBelow = this.terrain.getSurfaceYBelow(
+        this.position.x, this.position.z,
+        this.position.y + PLAYER_HEIGHT,
+      )
+      if (this.position.y <= surfBelow + GROUND_SNAP && this.velocity.y <= 0) {
+        this.position.y = surfBelow + GROUND_SNAP
+        this.velocity.y = 0
+        this.onGround = true
+      }
+
+      // Ceiling check
+      if (this.velocity.y > 0 && this.terrain.isSolid(
+        this.position.x, this.position.y + PLAYER_HEIGHT, this.position.z,
+      )) {
+        this.velocity.y = 0
+      }
     }
 
-    // ── Terrain collision ──────────────────────────────────────────────────
-    this.onGround = false
-
-    // Find the nearest solid surface below the player's feet
-    const surfaceY = this.terrain.getSurfaceYBelow(this.position.x, this.position.z, this.position.y)
-
-    if (this.position.y <= surfaceY + 0.1 && this.velocity.y <= 0) {
-      // Landing on a surface below us (works for tunnel floors too)
-      this.position.y = surfaceY + 0.1
-      this.velocity.y = 0
-      this.onGround = true
-    }
-
-    // Ceiling check: if head hits solid terrain above, kill upward velocity
-    if (this.velocity.y > 0 && this.terrain.isSolid(this.position.x, this.position.y + PLAYER_HEIGHT, this.position.z)) {
-      this.velocity.y = 0
-    }
-
-    // World floor (bottom of terrain grid)
+    // ── World floor safety net ──────────────────────────────────────────────
     if (this.position.y < -35) {
-      this.position.copyFrom(SPAWN)
+      const safeSurf = this.terrain.getSurfaceY(this.position.x, this.position.z)
+      if (safeSurf > -28) {
+        this.position.y = safeSurf + 1
+      } else {
+        this.position.set(0, this.terrain.getSurfaceY(0, 0) + 2, 0)
+      }
       this.velocity.setAll(0)
+      this.onGround = true
     }
 
     // Clamp to world horizontal bounds so the player can't walk off the edge
@@ -326,13 +361,7 @@ export class Player {
       this.modelRoot.position.z = this.position.z
       const entry = this.anims.get(this.currentAnim)
       const yOff = entry ? entry.yOffset : 0
-      if (this.onGround) {
-        // Snap model to visual terrain surface to prevent sinking through ground
-        const surfY = this.terrain.getSurfaceY(this.position.x, this.position.z)
-        this.modelRoot.position.y = surfY
-      } else {
-        this.modelRoot.position.y = this.position.y - yOff
-      }
+      this.modelRoot.position.y = this.position.y - yOff
       this.modelRoot.rotation.y = this.facingY
     }
 
