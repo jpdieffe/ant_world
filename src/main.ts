@@ -9,13 +9,12 @@ import {
   Ray,
   MeshBuilder,
   StandardMaterial,
-  Mesh,
 } from '@babylonjs/core'
 import { Terrain } from './terrain'
 import { Player } from './player'
 import { Network } from './network'
 import { RemotePlayer } from './remote'
-import { generateLevel, createFlag } from './level'
+import { generateLevel } from './level'
 import { Enemy } from './enemy'
 
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -107,8 +106,8 @@ async function startGame() {
   try {
     terrain = new Terrain(scene)
 
-    const bedrock = MeshBuilder.CreateGround('bedrock', { width: 400, height: 400 }, scene)
-    bedrock.position.y = -10.5
+    const bedrock = MeshBuilder.CreateGround('bedrock', { width: 1000, height: 1000 }, scene)
+    bedrock.position.y = -30.5
     const bedrockMat = new StandardMaterial('bedrockMat', scene)
     bedrockMat.diffuseColor = new Color3(0.30, 0.20, 0.12)
     bedrockMat.specularColor = new Color3(0, 0, 0)
@@ -154,13 +153,8 @@ async function startGame() {
   // ── Round / Level state ───────────────────────────────────────────────────
   let currentRound = 1
   let enemies: Enemy[] = []
-  let flagMesh: Mesh | null = null
-  let flagX = 0
-  let flagZ = 0
-  let flagY = 0
   let roundActive = false
   let lastRoundStartMs = 0
-  const FLAG_REACH = 3.5
 
   function startRound(round: number) {
     // Debounce — prevent double-triggers when both players detect the same event
@@ -178,18 +172,8 @@ async function startGame() {
     for (const e of enemies) e.dispose()
     enemies = []
 
-    // Dispose old flag
-    if (flagMesh) { flagMesh.dispose(); flagMesh = null }
-
-    // Generate level
+    // Generate level (use enemy spawn positions; flag position ignored)
     const level = generateLevel(round, terrain!.worldMinX, terrain!.worldMaxX, terrain!.worldMinZ, terrain!.worldMaxZ)
-
-    // Place flag
-    flagX = level.flagX
-    flagZ = level.flagZ
-    const flagSurf = terrain!.getSurfaceY(flagX, flagZ)
-    flagY = flagSurf + 0.1
-    flagMesh = createFlag(scene, flagX, flagZ, flagY)
 
     // Spawn enemies
     for (const sp of level.enemySpawns) {
@@ -203,30 +187,14 @@ async function startGame() {
     }
 
     roundActive = true
-    flashMessage(`Round ${round} — Reach the red flag!`, 3000)
 
-    // Host sends round to joiner so they spawn enemies/flag too
+    // Host sends round to joiner so they spawn enemies too
     if (network.isConnected()) {
       network.sendRound(round)
     }
   }
 
-  function onCaught() {
-    if (!roundActive) return
-    roundActive = false
-    flashMessage('Caught! Restarting round…', 2000, '#ff6666')
-    if (network.isConnected()) network.sendCaught()
-    setTimeout(() => startRound(currentRound), 2200)
-  }
-
-  function onFlagReached() {
-    if (!roundActive) return
-    roundActive = false
-    flashMessage(`Round ${currentRound} complete!`, 2500, '#66ff88')
-    setTimeout(() => startRound(currentRound + 1), 2800)
-  }
-
-  // Start round 1 (host or solo — joiner waits for host's round message)
+// Start round 1 (host or solo — joiner waits for host's round message)
   if (terrain && player && (network.isHost || !network.isConnected())) {
     hideStatus()
     lastRoundStartMs = 0 // allow first startRound
@@ -268,9 +236,8 @@ async function startGame() {
           digCooldown -= dt
           if (digCooldown <= 0) {
             digCooldown = DIG_INTERVAL
-            const cam = player.camera
-            const dir = cam.target.subtract(cam.position).normalize()
-            const ray = new Ray(cam.position, dir, 20)
+            const { origin, dir } = player.getCameraRay()
+            const ray = new Ray(origin, dir, 20)
             const hit = scene.pickWithRay(ray, (m: any) => m.name.startsWith('chunk_'))
             if (hit?.hit && hit.pickedPoint) {
               const pt = hit.pickedPoint
@@ -290,18 +257,7 @@ async function startGame() {
             ? new Vector3(network.lastRemoteState.x, network.lastRemoteState.y, network.lastRemoteState.z)
             : null
           for (const enemy of enemies) {
-            const caught = enemy.update(dt, player.position, remoteVec)
-            if (caught) { onCaught(); break }
-            // Check bullet hits from shooter enemies
-            if (enemy.checkBulletHit(player.position)) { onCaught(); break }
-          }
-
-          // ── Flag check (3D distance — digging under doesn't count) ─────
-          const fdx = player.position.x - flagX
-          const fdy = player.position.y - flagY
-          const fdz = player.position.z - flagZ
-          if (Math.sqrt(fdx * fdx + fdy * fdy + fdz * fdz) < FLAG_REACH) {
-            onFlagReached()
+            enemy.update(dt, player.position, remoteVec)
           }
         }
       }
@@ -327,11 +283,6 @@ async function startGame() {
       }
       if (network.pendingCaught) {
         network.pendingCaught = false
-        if (roundActive) {
-          roundActive = false
-          flashMessage('Caught! Restarting round…', 2000, '#ff6666')
-          setTimeout(() => startRound(currentRound), 2200)
-        }
       }
     } catch (err) {
       console.error('Render loop error:', err)

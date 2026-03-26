@@ -75,6 +75,9 @@ export class Player {
   private currentAnim: AnimState = 'idle'
   private animsLoaded = false
 
+  // Camera mode: 1=dynamic radius, 2=fixed orbit, 3=first-person
+  private cameraMode: 1 | 2 | 3 = 1
+
   constructor(scene: Scene, terrain: Terrain) {
     this.scene = scene
     this.terrain = terrain
@@ -111,15 +114,36 @@ export class Player {
       const sens = 0.004
       cam.alpha -= e.movementX * sens
       cam.beta  -= e.movementY * sens
-      if (cam.beta < (cam.lowerBetaLimit ?? 0.15))            cam.beta = cam.lowerBetaLimit ?? 0.15
-      if (cam.beta > (cam.upperBetaLimit ?? Math.PI * 0.85)) cam.beta = cam.upperBetaLimit ?? Math.PI * 0.85
+      const bLo = cam.lowerBetaLimit ?? 0.15
+      const bHi = cam.upperBetaLimit ?? Math.PI * 0.85
+      if (cam.beta < bLo) cam.beta = bLo
+      if (cam.beta > bHi) cam.beta = bHi
     })
+  }
+
+  private setCameraMode(m: 1 | 2 | 3): void {
+    if (m === this.cameraMode) return
+    this.cameraMode = m
+    const cam = this.camera
+    if (m === 3) {
+      cam.lowerBetaLimit = 0.05
+      cam.upperBetaLimit = Math.PI * 0.95
+      cam.upperRadiusLimit = null  // allow large radius for FPS trick
+    } else {
+      cam.lowerBetaLimit = 0.15
+      cam.upperBetaLimit = Math.PI * 0.85
+      cam.upperRadiusLimit = 28
+      cam.radius = this.desiredRadius
+    }
   }
 
   // ── Input ────────────────────────────────────────────────────────────────────
   private setupInput(): void {
     window.addEventListener('keydown', (e) => {
       this.keys.add(e.key.toLowerCase())
+      if (e.key === '1') this.setCameraMode(1)
+      if (e.key === '2') this.setCameraMode(2)
+      if (e.key === '3') this.setCameraMode(3)
     })
 
     window.addEventListener('keyup', (e) => {
@@ -193,13 +217,23 @@ export class Player {
     if (this.keys.has('d') || this.keys.has('arrowright')) moveX += 1
 
     // ── Camera-derived directions ──────────────────────────────────────────
-    // Use actual camera position → target vector so the angle is always exact
-    const camToPlayer = this.camera.target.subtract(this.camera.position)
-    const forward = new Vector3(camToPlayer.x, 0, camToPlayer.z).normalize()
-    const right   = new Vector3(forward.z, 0, -forward.x) // 90° CW in XZ
-
-    // Dog always faces the camera's horizontal direction (every frame)
-    this.facingY = Math.atan2(forward.x, forward.z)
+    let forward: Vector3, right: Vector3
+    if (this.cameraMode === 3) {
+      // FPS: derive facing from camera spherical angles
+      // camera position = target + R*(sinβ*cosα, cosβ, sinβ*sinα)
+      // so look direction = -spherical = (-sinβ*cosα, -cosβ, -sinβ*sinα)
+      const sb = Math.sin(this.camera.beta)
+      const ca = Math.cos(this.camera.alpha)
+      const sa = Math.sin(this.camera.alpha)
+      this.facingY = Math.atan2(-sb * ca, -sb * sa)
+      forward = new Vector3(Math.sin(this.facingY), 0, Math.cos(this.facingY))
+    } else {
+      // Modes 1 & 2: facing = horizontal direction from camera toward player
+      const camToPlayer = this.camera.target.subtract(this.camera.position)
+      forward = new Vector3(camToPlayer.x, 0, camToPlayer.z).normalize()
+      this.facingY = Math.atan2(forward.x, forward.z)
+    }
+    right = new Vector3(forward.z, 0, -forward.x) // 90° CW in XZ
 
     const moveDir = forward.scale(moveZ).add(right.scale(moveX))
     if (moveDir.length() > 0.01) {
@@ -264,7 +298,7 @@ export class Player {
     }
 
     // World floor (bottom of terrain grid)
-    if (this.position.y < -12) {
+    if (this.position.y < -35) {
       this.position.copyFrom(SPAWN)
       this.velocity.setAll(0)
     }
@@ -286,6 +320,8 @@ export class Player {
 
     // ── Sync model to position ─────────────────────────────────────────────
     if (this.modelRoot) {
+      // Hide model in FPS mode so you don't see your own fox
+      this.modelRoot.setEnabled(this.cameraMode !== 3)
       this.modelRoot.position.x = this.position.x
       this.modelRoot.position.z = this.position.z
       // Subtract yOffset so the model's feet (not its origin) land at position.y
@@ -295,14 +331,35 @@ export class Player {
       this.modelRoot.rotation.y = this.facingY
     }
 
-    // ── Camera target follows player ───────────────────────────────────────
-    // Raise the target when the camera is pulled in close so we look over the dog
-    const closeness = 1 - Math.max(0, Math.min(1, (this.camera.radius - CAM_MIN_RADIUS) / (CAM_DEFAULT_RADIUS - CAM_MIN_RADIUS)))
-    const headY = this.position.y + PLAYER_HEIGHT * 0.8 + closeness * 1.5
-    this.camera.target.set(this.position.x, headY, this.position.z)
+    // ── Camera update ───────────────────────────────────────────────────
+    if (this.cameraMode === 3) {
+      // FPS trick: place camera at eye level by pushing target far behind
+      // camera = target + R*(sinβ*cosα, cosβ, sinβ*sinα)  ⇒  target = eye - R*spherical
+      const FPS_R = 200
+      const cam   = this.camera
+      const eyeY  = this.position.y + PLAYER_HEIGHT * 0.85
+      const sb = Math.sin(cam.beta),  cb = Math.cos(cam.beta)
+      const sa = Math.sin(cam.alpha), ca = Math.cos(cam.alpha)
+      cam.target.set(
+        this.position.x - FPS_R * sb * ca,
+        eyeY            - FPS_R * cb,
+        this.position.z - FPS_R * sb * sa,
+      )
+      cam.radius = FPS_R
+    } else {
+      // Raise the target when the camera is pulled in close so we look over the fox
+      const closeness = 1 - Math.max(0, Math.min(1, (this.camera.radius - CAM_MIN_RADIUS) / (CAM_DEFAULT_RADIUS - CAM_MIN_RADIUS)))
+      const headY = this.position.y + PLAYER_HEIGHT * 0.8 + closeness * 1.5
+      this.camera.target.set(this.position.x, headY, this.position.z)
 
-    // ── Dynamic camera radius (terrain collision) ──────────────────────────
-    this.adjustCameraRadius(dt)
+      if (this.cameraMode === 1) {
+        // ── Mode 1: dynamic radius — pull in when terrain clips camera ──────
+        this.adjustCameraRadius(dt)
+      } else {
+        // ── Mode 2: fixed orbit — ignore terrain, stay at desired radius ───
+        this.camera.radius = this.desiredRadius
+      }
+    }
   }
 
   /**
@@ -346,6 +403,27 @@ export class Player {
   /** Get current position (for external use) */
   getPosition(): Vector3 {
     return this.position.clone()
+  }
+
+  /**
+   * Get the camera origin and look direction for raycasting (e.g. digging).
+   * Works correctly for all three camera modes.
+   */
+  getCameraRay(): { origin: Vector3; dir: Vector3 } {
+    const cam = this.camera
+    if (this.cameraMode === 3) {
+      // FPS: camera is at eye pos, looks in -spherical direction
+      const sb = Math.sin(cam.beta),  cb = Math.cos(cam.beta)
+      const sa = Math.sin(cam.alpha), ca = Math.cos(cam.alpha)
+      return {
+        origin: cam.position.clone(),
+        dir:    new Vector3(-sb * ca, -cb, -sb * sa),
+      }
+    }
+    return {
+      origin: cam.position.clone(),
+      dir:    cam.target.subtract(cam.position).normalize(),
+    }
   }
 
   /** Teleport player to a new position */

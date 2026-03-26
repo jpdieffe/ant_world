@@ -30,11 +30,11 @@ interface EnemyConfig {
 }
 
 const CONFIGS: Record<EnemyType, EnemyConfig> = {
-  normal:    { scale: 6.4,  detectRange: 18, chaseSpeed: 7,    patrolSpeed: 2,   catchDist: 2.5, flies: false, flyHeight: 0,  shootInterval: 0,   tint: null },
-  shooter:   { scale: 6.4,  detectRange: 30, chaseSpeed: 4,    patrolSpeed: 1.5, catchDist: 2.5, flies: false, flyHeight: 0,  shootInterval: 1.5, tint: new Color3(1, 0.3, 0.1) },
-  flyer:     { scale: 6.4,  detectRange: 25, chaseSpeed: 8,    patrolSpeed: 3,   catchDist: 2.5, flies: true,  flyHeight: 12, shootInterval: 0,   tint: new Color3(0.3, 0.7, 1) },
-  giant:     { scale: 25.6, detectRange: 22, chaseSpeed: 5.6,  patrolSpeed: 1.6, catchDist: 5,   flies: false, flyHeight: 0,  shootInterval: 0,   tint: new Color3(0.6, 0.2, 0.2) },
-  speedster: { scale: 3.2,  detectRange: 20, chaseSpeed: 10.5, patrolSpeed: 4,   catchDist: 1.8, flies: false, flyHeight: 0,  shootInterval: 0,   tint: new Color3(1, 1, 0.2) },
+  normal:    { scale: 64,   detectRange: 18, chaseSpeed: 7,    patrolSpeed: 2,   catchDist: 2.5, flies: false, flyHeight: 0,  shootInterval: 0,   tint: null },
+  shooter:   { scale: 64,   detectRange: 30, chaseSpeed: 4,    patrolSpeed: 1.5, catchDist: 2.5, flies: false, flyHeight: 0,  shootInterval: 1.5, tint: new Color3(1, 0.3, 0.1) },
+  flyer:     { scale: 64,   detectRange: 25, chaseSpeed: 8,    patrolSpeed: 3,   catchDist: 2.5, flies: true,  flyHeight: 12, shootInterval: 0,   tint: new Color3(0.3, 0.7, 1) },
+  giant:     { scale: 256,  detectRange: 22, chaseSpeed: 5.6,  patrolSpeed: 1.6, catchDist: 5,   flies: false, flyHeight: 0,  shootInterval: 0,   tint: new Color3(0.6, 0.2, 0.2) },
+  speedster: { scale: 32,   detectRange: 20, chaseSpeed: 10.5, patrolSpeed: 4,   catchDist: 1.8, flies: false, flyHeight: 0,  shootInterval: 0,   tint: new Color3(1, 1, 0.2) },
 }
 
 export interface Bullet {

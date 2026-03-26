@@ -1,0 +1,1 @@
+import{bo as e}from"./index-Pl5Gy81M.js";export{e as gaussianSplattingVertexShaderWGSL};
