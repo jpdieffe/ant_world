@@ -255,7 +255,12 @@ export class Player {
 
     if (this.onGround) {
       // ── GROUNDED: surface-following movement ────────────────────────────
-      const searchFromY = this.position.y + STEP_HEIGHT + PLAYER_HEIGHT
+      // Only search from feet + STEP_HEIGHT so the scan stays inside tunnels
+      // instead of poking above the ceiling and finding the outdoor surface.
+      let searchFromY = this.position.y + STEP_HEIGHT
+      if (this.terrain.isSolid(this.position.x, searchFromY, this.position.z)) {
+        searchFromY = this.position.y + 0.5
+      }
       const chestY = this.position.y + PLAYER_HEIGHT * 0.7
 
       // Try X movement (allows wall-sliding when blocked diagonally)

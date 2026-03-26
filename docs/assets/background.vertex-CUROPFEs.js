@@ -1,0 +1,1 @@
+import{Jn as e}from"./index-DqpATXHD.js";export{e as backgroundVertexShader};
