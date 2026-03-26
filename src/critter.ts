@@ -9,7 +9,7 @@ import {
 } from '@babylonjs/core'
 import type { Terrain } from './terrain'
 
-export type CritterType = 'spider' | 'pillbug'
+export type CritterType = 'spider' | 'pillbug' | 'mantis' | 'ladybug' | 'cockroach'
 
 interface CritterConfig {
   scale: number
@@ -17,11 +17,16 @@ interface CritterConfig {
   wanderRadius: number
   pauseMin: number
   pauseMax: number
+  /** If false, uses idle.glb for both idle and walking (no walk.glb available) */
+  hasWalk?: boolean
 }
 
 const CONFIGS: Record<CritterType, CritterConfig> = {
-  spider:  { scale: 30, speed: 6, wanderRadius: 80, pauseMin: 0.5, pauseMax: 2 },
-  pillbug: { scale: 6,  speed: 2, wanderRadius: 50, pauseMin: 2,   pauseMax: 5 },
+  spider:    { scale: 30, speed: 6,   wanderRadius: 80, pauseMin: 0.5, pauseMax: 2,   hasWalk: true  },
+  pillbug:   { scale: 6,  speed: 2,   wanderRadius: 50, pauseMin: 2,   pauseMax: 5,   hasWalk: true  },
+  mantis:    { scale: 22, speed: 5,   wanderRadius: 100, pauseMin: 1,  pauseMax: 4,   hasWalk: true  },
+  ladybug:   { scale: 8,  speed: 4,   wanderRadius: 60, pauseMin: 1,   pauseMax: 3,   hasWalk: true  },
+  cockroach: { scale: 14, speed: 8,   wanderRadius: 120, pauseMin: 0.3,pauseMax: 1.5, hasWalk: false },
 }
 
 function meshBottomY(meshes: AbstractMesh[]): number {
@@ -88,18 +93,6 @@ export class Critter {
   private async load(): Promise<void> {
     const base = `./assets/${this.type}/`
     try {
-      // Walk animation
-      const walkRes = await SceneLoader.ImportMeshAsync('', '', base + 'walk.glb', this.scene)
-      this.walkRoot = new TransformNode(`${this.type}_walk_${Math.random()}`, this.scene)
-      const walkMeshes = walkRes.meshes.filter(m => m !== walkRes.meshes[0])
-      this.walkYOff = meshBottomY(walkMeshes) * this.cfg.scale
-      for (const m of walkMeshes) m.parent = this.walkRoot
-      walkRes.meshes[0].dispose()
-      this.walkRoot.scaling.setAll(this.cfg.scale)
-      this.walkAnim = walkRes.animationGroups[0] ?? null
-      if (this.walkAnim) { this.walkAnim.stop(); this.walkAnim.loopAnimation = true }
-      this.walkRoot.setEnabled(false)
-
       // Idle animation
       const idleRes = await SceneLoader.ImportMeshAsync('', '', base + 'idle.glb', this.scene)
       this.idleRoot = new TransformNode(`${this.type}_idle_${Math.random()}`, this.scene)
@@ -110,6 +103,25 @@ export class Critter {
       this.idleRoot.scaling.setAll(this.cfg.scale)
       this.idleAnim = idleRes.animationGroups[0] ?? null
       if (this.idleAnim) { this.idleAnim.stop(); this.idleAnim.loopAnimation = true }
+
+      if (this.cfg.hasWalk !== false) {
+        // Walk animation (separate mesh swap)
+        const walkRes = await SceneLoader.ImportMeshAsync('', '', base + 'walk.glb', this.scene)
+        this.walkRoot = new TransformNode(`${this.type}_walk_${Math.random()}`, this.scene)
+        const walkMeshes = walkRes.meshes.filter(m => m !== walkRes.meshes[0])
+        this.walkYOff = meshBottomY(walkMeshes) * this.cfg.scale
+        for (const m of walkMeshes) m.parent = this.walkRoot
+        walkRes.meshes[0].dispose()
+        this.walkRoot.scaling.setAll(this.cfg.scale)
+        this.walkAnim = walkRes.animationGroups[0] ?? null
+        if (this.walkAnim) { this.walkAnim.stop(); this.walkAnim.loopAnimation = true }
+        this.walkRoot.setEnabled(false)
+      } else {
+        // No separate walk mesh — reuse idle for movement
+        this.walkRoot = this.idleRoot
+        this.walkAnim = this.idleAnim
+        this.walkYOff = this.idleYOff
+      }
 
       // Start in idle
       this.idleRoot.setEnabled(true)
@@ -174,7 +186,8 @@ export class Critter {
   dispose(): void {
     this.walkAnim?.stop()
     this.idleAnim?.stop()
-    if (this.walkRoot) {
+    // walkRoot may alias idleRoot when hasWalk === false — only dispose once
+    if (this.walkRoot && this.walkRoot !== this.idleRoot) {
       this.walkRoot.getChildMeshes(true).forEach(m => m.dispose())
       this.walkRoot.dispose()
     }

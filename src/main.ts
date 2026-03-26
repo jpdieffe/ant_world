@@ -179,7 +179,9 @@ async function startGame() {
     critters = []
 
     // Spawn critters scattered across the map
-    const CRITTER_TYPES: [CritterType, number][] = [['spider', 15], ['pillbug', 20]]
+    const CRITTER_TYPES: [CritterType, number][] = [
+      ['spider', 12], ['pillbug', 15], ['mantis', 8], ['ladybug', 15], ['cockroach', 10],
+    ]
     for (const [type, count] of CRITTER_TYPES) {
       for (let i = 0; i < count; i++) {
         const cx = terrain!.worldMinX + 20 + Math.random() * (terrain!.worldMaxX - terrain!.worldMinX - 40)

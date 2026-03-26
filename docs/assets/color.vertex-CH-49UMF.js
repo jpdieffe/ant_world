@@ -1,0 +1,1 @@
+import{Gn as e}from"./index-DdtbPEOJ.js";export{e as colorVertexShader};

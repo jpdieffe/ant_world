@@ -1,0 +1,1 @@
+import{u as e}from"./index-DdtbPEOJ.js";export{e as spritesVertexShaderWGSL};

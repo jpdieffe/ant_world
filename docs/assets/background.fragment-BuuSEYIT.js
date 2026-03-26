@@ -1,0 +1,1 @@
+import{Yn as e}from"./index-DdtbPEOJ.js";export{e as backgroundPixelShaderWGSL};

@@ -1,0 +1,1 @@
+import{bo as e}from"./index-DdtbPEOJ.js";export{e as gaussianSplattingVertexShaderWGSL};
