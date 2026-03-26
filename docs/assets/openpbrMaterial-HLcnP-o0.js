@@ -1,1 +1,0 @@
-import{Un as e}from"./index-BGLUTm9a.js";export{e as OpenPBRMaterial};

@@ -19,7 +19,7 @@ const FOX_SCALE     = 1.8
 
 const FOX_ANIM_FILES: Record<AnimState, string> = {
   idle: './assets/fox/idle.glb',
-  run:  './assets/fox/run.glb',
+  walk: './assets/fox/run.glb',
   jump: './assets/fox/jump.glb',
   fall: './assets/fox/fall.glb',
 }

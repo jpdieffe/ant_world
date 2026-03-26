@@ -19,7 +19,7 @@ const MOVE_SPEED    = 8
 const PLAYER_HEIGHT = 1.2
 const PLAYER_RADIUS = 0.4
 const TERMINAL_VEL  = -30
-const ANT_SCALE     = 1.8
+const ANT_SCALE     = 2.16
 
 // ── Camera constants ─────────────────────────────────────────────────────────
 const CAM_DEFAULT_RADIUS = 14
@@ -30,7 +30,7 @@ const SPAWN = new Vector3(0, 4, 0)
 
 const ANT_ANIM_FILES: Record<AnimState, string> = {
   idle: './assets/ant/idle.glb',
-  run:  './assets/ant/run.glb',
+  walk: './assets/ant/walk.glb',
   jump: './assets/ant/jump.glb',
   fall: './assets/ant/fall.glb',
 }
@@ -313,21 +313,26 @@ export class Player {
     if (!this.onGround) {
       this.playAnim(this.velocity.y > 0 ? 'jump' : 'fall')
     } else if (moving) {
-      this.playAnim('run')
+      this.playAnim('walk')
     } else {
       this.playAnim('idle')
     }
 
     // ── Sync model to position ─────────────────────────────────────────────
     if (this.modelRoot) {
-      // Hide model in FPS mode so you don't see your own fox
+      // Hide model in FPS mode so you don't see your own ant
       this.modelRoot.setEnabled(this.cameraMode !== 3)
       this.modelRoot.position.x = this.position.x
       this.modelRoot.position.z = this.position.z
-      // Subtract yOffset so the model's feet (not its origin) land at position.y
       const entry = this.anims.get(this.currentAnim)
       const yOff = entry ? entry.yOffset : 0
-      this.modelRoot.position.y = this.position.y - yOff
+      if (this.onGround) {
+        // Snap model to visual terrain surface to prevent sinking through ground
+        const surfY = this.terrain.getSurfaceY(this.position.x, this.position.z)
+        this.modelRoot.position.y = surfY
+      } else {
+        this.modelRoot.position.y = this.position.y - yOff
+      }
       this.modelRoot.rotation.y = this.facingY
     }
 

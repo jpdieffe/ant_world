@@ -1,0 +1,1 @@
+import{or as e}from"./index-BFFJwL6t.js";export{e as shadowMapFragment};

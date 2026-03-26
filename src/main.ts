@@ -16,6 +16,7 @@ import { Network } from './network'
 import { RemotePlayer } from './remote'
 import { generateLevel } from './level'
 import { Enemy } from './enemy'
+import { Critter, CritterType } from './critter'
 
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 const network = new Network()
@@ -153,6 +154,7 @@ async function startGame() {
   // ── Round / Level state ───────────────────────────────────────────────────
   let currentRound = 1
   let enemies: Enemy[] = []
+  let critters: Critter[] = []
   let roundActive = false
   let lastRoundStartMs = 0
 
@@ -171,6 +173,20 @@ async function startGame() {
     // Dispose old enemies
     for (const e of enemies) e.dispose()
     enemies = []
+
+    // Dispose old critters
+    for (const c of critters) c.dispose()
+    critters = []
+
+    // Spawn critters scattered across the map
+    const CRITTER_TYPES: [CritterType, number][] = [['spider', 15], ['pillbug', 20]]
+    for (const [type, count] of CRITTER_TYPES) {
+      for (let i = 0; i < count; i++) {
+        const cx = terrain!.worldMinX + 20 + Math.random() * (terrain!.worldMaxX - terrain!.worldMinX - 40)
+        const cz = terrain!.worldMinZ + 20 + Math.random() * (terrain!.worldMaxZ - terrain!.worldMinZ - 40)
+        critters.push(new Critter(scene, terrain!, cx, cz, type))
+      }
+    }
 
     // Generate level (use enemy spawn positions; flag position ignored)
     const level = generateLevel(round, terrain!.worldMinX, terrain!.worldMaxX, terrain!.worldMinZ, terrain!.worldMaxZ)
@@ -259,6 +275,7 @@ async function startGame() {
           for (const enemy of enemies) {
             enemy.update(dt, player.position, remoteVec)
           }
+          for (const c of critters) c.update(dt)
         }
       }
 

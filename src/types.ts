@@ -1,5 +1,5 @@
-/** Animation states for the fox player */
-export type AnimState = 'idle' | 'run' | 'jump' | 'fall'
+/** Animation states for the ant player */
+export type AnimState = 'idle' | 'walk' | 'jump' | 'fall'
 
 /** Player state synced over the network */
 export interface PlayerState {
