@@ -19,7 +19,7 @@ const MOVE_SPEED    = 8
 const PLAYER_HEIGHT = 1.2
 const PLAYER_RADIUS = 0.4
 const TERMINAL_VEL  = -30
-const FOX_SCALE     = 1.8
+const ANT_SCALE     = 1.8
 
 // ── Camera constants ─────────────────────────────────────────────────────────
 const CAM_DEFAULT_RADIUS = 14
@@ -28,11 +28,11 @@ const CAM_LERP_SPEED     = 12   // how fast the radius adjusts (units/sec)
 
 const SPAWN = new Vector3(0, 4, 0)
 
-const FOX_ANIM_FILES: Record<AnimState, string> = {
-  idle: './assets/fox/idle.glb',
-  run:  './assets/fox/run.glb',
-  jump: './assets/fox/jump.glb',
-  fall: './assets/fox/fall.glb',
+const ANT_ANIM_FILES: Record<AnimState, string> = {
+  idle: './assets/ant/idle.glb',
+  run:  './assets/ant/run.glb',
+  jump: './assets/ant/jump.glb',
+  fall: './assets/ant/fall.glb',
 }
 
 interface AnimEntry {
@@ -154,12 +154,12 @@ export class Player {
   // ── Model ────────────────────────────────────────────────────────────────────
   private async loadModel(): Promise<void> {
     // Create a common root that follows the player position
-    this.modelRoot = new TransformNode('foxRoot', this.scene)
+    this.modelRoot = new TransformNode('antRoot', this.scene)
 
-    for (const [anim, file] of Object.entries(FOX_ANIM_FILES) as [AnimState, string][]) {
+    for (const [anim, file] of Object.entries(ANT_ANIM_FILES) as [AnimState, string][]) {
       try {
         const result = await SceneLoader.ImportMeshAsync('', '', file, this.scene)
-        const root = new TransformNode(`fox_${anim}`, this.scene)
+        const root = new TransformNode(`ant_${anim}`, this.scene)
         root.parent = this.modelRoot
 
         const meshes = result.meshes.filter((m: AbstractMesh): m is Mesh => m !== result.meshes[0])
@@ -171,7 +171,7 @@ export class Player {
         // Clean up the __root__ node
         result.meshes[0].dispose()
 
-        root.scaling.setAll(FOX_SCALE)
+        root.scaling.setAll(ANT_SCALE)
         root.setEnabled(false)
 
         const group = result.animationGroups[0] ?? null
@@ -181,9 +181,9 @@ export class Player {
           group.loopAnimation = !noLoop
         }
 
-        this.anims.set(anim, { root, yOffset: bottomY * FOX_SCALE, group })
+        this.anims.set(anim, { root, yOffset: bottomY * ANT_SCALE, group })
       } catch (err) {
-        console.warn(`Failed to load fox anim: ${anim}`, err)
+        console.warn(`Failed to load ant anim: ${anim}`, err)
       }
     }
 

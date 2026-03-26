@@ -1,0 +1,1 @@
+import{_n as e}from"./index-BGLUTm9a.js";export{e as particlesVertexShaderWGSL};

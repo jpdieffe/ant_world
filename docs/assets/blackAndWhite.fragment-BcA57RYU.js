@@ -1,0 +1,1 @@
+import{Ot as e}from"./index-BGLUTm9a.js";export{e as blackAndWhitePixelShaderWGSL};

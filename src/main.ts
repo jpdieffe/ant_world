@@ -92,7 +92,7 @@ async function startGame() {
 
   scene.fogMode = Scene.FOGMODE_EXP2
   scene.fogColor = new Color3(0.55, 0.78, 0.96)
-  scene.fogDensity = 0.015
+  scene.fogDensity = 0.003
 
   const hemi = new HemisphericLight('hemi', new Vector3(0, 1, 0), scene)
   hemi.intensity = 0.6

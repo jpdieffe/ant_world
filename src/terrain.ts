@@ -328,7 +328,8 @@ class TerrainChunk {
     // Scan from top to bottom, find the first solid cell
     for (let y = VERT_SAMPLES - 1; y >= 0; y--) {
       if (this.density[this.idx(gx, y, gz)] > 0) {
-        return this.originY + y * CELL_SIZE
+        // Add half a cell so the player stands on the interpolated surface, not the sample point
+        return this.originY + (y + 0.5) * CELL_SIZE
       }
     }
     return this.originY
@@ -350,7 +351,7 @@ class TerrainChunk {
     // Scan downward: find an air→solid transition (top of solid below player)
     for (let y = startGy; y >= 0; y--) {
       if (this.density[this.idx(gx, y, gz)] > 0) {
-        return this.originY + y * CELL_SIZE
+        return this.originY + (y + 0.5) * CELL_SIZE
       }
     }
     return this.originY

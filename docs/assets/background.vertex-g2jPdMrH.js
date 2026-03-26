@@ -1,0 +1,1 @@
+import{Xn as e}from"./index-BGLUTm9a.js";export{e as backgroundVertexShaderWGSL};
