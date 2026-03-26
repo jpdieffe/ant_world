@@ -1,1 +1,0 @@
-import{Ot as e}from"./index-DqpATXHD.js";export{e as blackAndWhitePixelShaderWGSL};

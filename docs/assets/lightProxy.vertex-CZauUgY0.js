@@ -1,0 +1,1 @@
+import{$n as e}from"./index-BtISBh35.js";export{e as lightProxyVertexShader};

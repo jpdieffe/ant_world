@@ -78,12 +78,19 @@ export class Player {
   private currentAnim: AnimState = 'idle'
   private animsLoaded = false
 
-  // Camera mode: 1=dynamic radius, 2=fixed orbit, 3=first-person
-  private cameraMode: 1 | 2 | 3 = 1
+  // Camera mode: 1=dynamic radius, 2=fixed orbit, 3=first-person, 4=experimental adjustable
+  private cameraMode: 1 | 2 | 3 | 4 = 1
+
+  // Mode 4 adjustable offsets
+  private cam4Radius = 14
+  private cam4OffsetX = 0
+  private cam4OffsetY = 0
+  private cam4InfoEl: HTMLElement | null = null
 
   constructor(scene: Scene, terrain: Terrain) {
     this.scene = scene
     this.terrain = terrain
+    this.cam4InfoEl = document.getElementById('cam4Info')
     this.setupCamera()
     this.setupInput()
     this.loadModel()
@@ -124,14 +131,26 @@ export class Player {
     })
   }
 
-  private setCameraMode(m: 1 | 2 | 3): void {
+  private setCameraMode(m: 1 | 2 | 3 | 4): void {
     if (m === this.cameraMode) return
+    // Hide mode-4 overlay when leaving
+    if (this.cam4InfoEl) this.cam4InfoEl.style.display = 'none'
     this.cameraMode = m
     const cam = this.camera
     if (m === 3) {
       cam.lowerBetaLimit = 0.05
       cam.upperBetaLimit = Math.PI * 0.95
       cam.upperRadiusLimit = null  // allow large radius for FPS trick
+    } else if (m === 4) {
+      // Reset offsets on entry
+      this.cam4Radius = 14
+      this.cam4OffsetX = 0
+      this.cam4OffsetY = 0
+      cam.lowerBetaLimit = 0.15
+      cam.upperBetaLimit = Math.PI * 0.85
+      cam.upperRadiusLimit = 60
+      cam.radius = this.cam4Radius
+      if (this.cam4InfoEl) this.cam4InfoEl.style.display = 'block'
     } else {
       cam.lowerBetaLimit = 0.15
       cam.upperBetaLimit = Math.PI * 0.85
@@ -147,6 +166,7 @@ export class Player {
       if (e.key === '1') this.setCameraMode(1)
       if (e.key === '2') this.setCameraMode(2)
       if (e.key === '3') this.setCameraMode(3)
+      if (e.key === '4') this.setCameraMode(4)
     })
 
     window.addEventListener('keyup', (e) => {
@@ -218,6 +238,18 @@ export class Player {
     if (this.keys.has('s') || this.keys.has('arrowdown'))  moveZ -= 1
     if (this.keys.has('a') || this.keys.has('arrowleft'))  moveX -= 1
     if (this.keys.has('d') || this.keys.has('arrowright')) moveX += 1
+
+    // ── Mode 4 camera adjustments ───────────────────────────────────────
+    if (this.cameraMode === 4) {
+      const zoomSpeed = 12
+      const panSpeed = 8
+      if (this.keys.has(',') || this.keys.has('<')) this.cam4Radius = Math.max(1, this.cam4Radius - zoomSpeed * dt)
+      if (this.keys.has('.') || this.keys.has('>')) this.cam4Radius = Math.min(60, this.cam4Radius + zoomSpeed * dt)
+      if (this.keys.has('j')) this.cam4OffsetX -= panSpeed * dt
+      if (this.keys.has('l')) this.cam4OffsetX += panSpeed * dt
+      if (this.keys.has('i')) this.cam4OffsetY += panSpeed * dt
+      if (this.keys.has('k')) this.cam4OffsetY -= panSpeed * dt
+    }
 
     // ── Camera-derived directions ──────────────────────────────────────────
     let forward: Vector3, right: Vector3
@@ -400,6 +432,17 @@ export class Player {
       if (this.cameraMode === 1) {
         // ── Mode 1: dynamic radius — pull in when terrain clips camera ──────
         this.adjustCameraRadius(dt)
+      } else if (this.cameraMode === 4) {
+        // ── Mode 4: experimental adjustable camera ─────────────────────────
+        this.camera.radius = this.cam4Radius
+        this.camera.target.x += this.cam4OffsetX
+        this.camera.target.y += this.cam4OffsetY
+        if (this.cam4InfoEl) {
+          this.cam4InfoEl.textContent =
+            `CAM4  radius: ${this.cam4Radius.toFixed(2)}\n` +
+            `      offX:   ${this.cam4OffsetX.toFixed(2)}\n` +
+            `      offY:   ${this.cam4OffsetY.toFixed(2)}`
+        }
       } else {
         // ── Mode 2: fixed orbit — ignore terrain, stay at desired radius ───
         this.camera.radius = this.desiredRadius

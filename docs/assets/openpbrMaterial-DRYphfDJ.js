@@ -1,1 +1,0 @@
-import{Un as e}from"./index-DqpATXHD.js";export{e as OpenPBRMaterial};
