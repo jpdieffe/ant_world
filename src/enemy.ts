@@ -30,11 +30,11 @@ interface EnemyConfig {
 }
 
 const CONFIGS: Record<EnemyType, EnemyConfig> = {
-  normal:    { scale: 192,  detectRange: 18, chaseSpeed: 7,    patrolSpeed: 2,   catchDist: 2.5, flies: false, flyHeight: 0,  shootInterval: 0,   tint: null },
-  shooter:   { scale: 192,  detectRange: 30, chaseSpeed: 4,    patrolSpeed: 1.5, catchDist: 2.5, flies: false, flyHeight: 0,  shootInterval: 1.5, tint: new Color3(1, 0.3, 0.1) },
-  flyer:     { scale: 192,  detectRange: 25, chaseSpeed: 8,    patrolSpeed: 3,   catchDist: 2.5, flies: true,  flyHeight: 12, shootInterval: 0,   tint: new Color3(0.3, 0.7, 1) },
-  giant:     { scale: 768,  detectRange: 22, chaseSpeed: 5.6,  patrolSpeed: 1.6, catchDist: 5,   flies: false, flyHeight: 0,  shootInterval: 0,   tint: new Color3(0.6, 0.2, 0.2) },
-  speedster: { scale: 96,   detectRange: 20, chaseSpeed: 10.5, patrolSpeed: 4,   catchDist: 1.8, flies: false, flyHeight: 0,  shootInterval: 0,   tint: new Color3(1, 1, 0.2) },
+  normal:    { scale: 384,  detectRange: 60, chaseSpeed: 20,   patrolSpeed: 8,   catchDist: 6,   flies: false, flyHeight: 0,  shootInterval: 0,   tint: null },
+  shooter:   { scale: 384,  detectRange: 80, chaseSpeed: 14,   patrolSpeed: 6,   catchDist: 6,   flies: false, flyHeight: 0,  shootInterval: 1.5, tint: new Color3(1, 0.3, 0.1) },
+  flyer:     { scale: 384,  detectRange: 70, chaseSpeed: 24,   patrolSpeed: 10,  catchDist: 6,   flies: true,  flyHeight: 25, shootInterval: 0,   tint: new Color3(0.3, 0.7, 1) },
+  giant:     { scale: 1536, detectRange: 80, chaseSpeed: 16,   patrolSpeed: 6,   catchDist: 12,  flies: false, flyHeight: 0,  shootInterval: 0,   tint: new Color3(0.6, 0.2, 0.2) },
+  speedster: { scale: 192,  detectRange: 50, chaseSpeed: 30,   patrolSpeed: 12,  catchDist: 4,   flies: false, flyHeight: 0,  shootInterval: 0,   tint: new Color3(1, 1, 0.2) },
 }
 
 export interface Bullet {
@@ -134,7 +134,7 @@ export class Enemy {
         if (key.includes(name)) { ag = group; break }
       }
     }
-    if (ag) { ag.start(true); this.currentAnimName = name }
+    if (ag) { ag.start(true, 0.2); this.currentAnimName = name }
   }
 
   /** Returns true if the enemy caught the player */
@@ -182,9 +182,9 @@ export class Enemy {
       }
     } else {
       this.chasing = false
-      this.patrolAngle += dt * 0.5
-      const px = this.spawnPos.x + Math.sin(this.patrolAngle) * 4
-      const pz = this.spawnPos.z + Math.cos(this.patrolAngle) * 4
+      this.patrolAngle += dt * 0.3
+      const px = this.spawnPos.x + Math.sin(this.patrolAngle) * 20
+      const pz = this.spawnPos.z + Math.cos(this.patrolAngle) * 20
       const pdx = px - this.position.x
       const pdz = pz - this.position.z
       const pDist = Math.sqrt(pdx * pdx + pdz * pdz)
