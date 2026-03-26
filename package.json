@@ -1,0 +1,20 @@
+{
+  "name": "dog-world",
+  "version": "1.0.0",
+  "description": "3D digging game — play as a fox and carve smooth tunnels",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@babylonjs/core": "8.55.3",
+    "@babylonjs/loaders": "8.55.3",
+    "peerjs": "^1.5.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0"
+  }
+}

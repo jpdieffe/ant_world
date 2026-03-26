@@ -1,0 +1,19 @@
+import{p as e}from"./math.scalar.functions-PeE1O4gN.js";import{t}from"./shaderStore-1xgJNigV.js";var n=e({clipPlaneFragmentDeclarationWGSL:()=>a}),r=`clipPlaneFragmentDeclaration`,i=`#ifdef CLIPPLANE
+varying fClipDistance: f32;
+#endif
+#ifdef CLIPPLANE2
+varying fClipDistance2: f32;
+#endif
+#ifdef CLIPPLANE3
+varying fClipDistance3: f32;
+#endif
+#ifdef CLIPPLANE4
+varying fClipDistance4: f32;
+#endif
+#ifdef CLIPPLANE5
+varying fClipDistance5: f32;
+#endif
+#ifdef CLIPPLANE6
+varying fClipDistance6: f32;
+#endif
+`;t.IncludesShadersStoreWGSL[r]||(t.IncludesShadersStoreWGSL[r]=i);var a={name:r,shader:i};export{n as t};

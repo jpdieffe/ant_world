@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dog World</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      outline: none;
+    }
+
+    /* ── HUD ── */
+    #hud {
+      position: fixed;
+      bottom: 0.9rem;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      color: rgba(255, 255, 255, 0.42);
+      font-family: system-ui, sans-serif;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    /* ── Dig indicator ── */
+    #digIndicator {
+      position: fixed;
+      top: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 20, 50, 0.88);
+      border: 1px solid #c8823a;
+      border-radius: 10px;
+      padding: 0.4rem 1.4rem;
+      color: #e8b060;
+      font-family: system-ui, sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      pointer-events: none;
+      z-index: 15;
+      white-space: nowrap;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Lobby overlay ── */
+    #lobby {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 5, 20, 0.95);
+      z-index: 50;
+      gap: 1.2rem;
+      font-family: system-ui, sans-serif;
+      color: #cdf;
+    }
+    #lobby h1 { font-size: 2.4rem; letter-spacing: 0.06em; }
+    #lobby p  { font-size: 0.9rem; opacity: 0.6; }
+    #playBtn {
+      padding: 0.7rem 2.6rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: 2px solid #6af;
+      border-radius: 8px;
+      background: rgba(60, 120, 255, 0.18);
+      color: #9df;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.15s;
+    }
+    #playBtn:hover { background: rgba(60, 120, 255, 0.35); }
+
+    /* ── Screen-center crosshair ── */
+    #crosshair {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 24px;
+      height: 24px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #crosshair::before,
+    #crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 1px;
+    }
+    #crosshair::before {
+      top: 50%;
+      left: 2px;
+      right: 2px;
+      height: 2px;
+      transform: translateY(-50%);
+    }
+    #crosshair::after {
+      left: 50%;
+      top: 2px;
+      bottom: 2px;
+      width: 2px;
+      transform: translateX(-50%);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="renderCanvas" tabindex="0"></canvas>
+
+  <!-- Lobby / click to play -->
+  <div id="lobby">
+    <h1>🦊 Dog World</h1>
+
+    <button id="playBtn">Solo Play</button>
+
+    <div style="display:flex; gap:0.6rem; align-items:center;">
+      <button id="hostBtn" style="padding:0.7rem 2rem; font-size:1.05rem; font-weight:700; border:2px solid #6f6; border-radius:8px; background:rgba(60,200,60,0.15); color:#9f9; cursor:pointer; letter-spacing:0.04em;">Host Game</button>
+      <input  id="joinInput" type="text" placeholder="Room code" style="padding:0.55rem 0.8rem; font-size:1rem; border:2px solid #6af; border-radius:8px; background:rgba(30,40,80,0.7); color:#cdf; width:10rem; text-align:center;" />
+      <button id="joinBtn" style="padding:0.7rem 2rem; font-size:1.05rem; font-weight:700; border:2px solid #6af; border-radius:8px; background:rgba(60,120,255,0.18); color:#9df; cursor:pointer; letter-spacing:0.04em;">Join</button>
+    </div>
+
+    <p id="lobbyMsg"></p>
+    <p>WASD move &nbsp;·&nbsp; Space jump &nbsp;·&nbsp; Click to aim &nbsp;·&nbsp; Right-click dig</p>
+  </div>
+
+  <!-- Screen crosshair -->
+  <div id="crosshair"></div>
+
+  <!-- Round HUD -->
+  <div id="roundHud" style="position:fixed; top:1.5rem; right:1.5rem; background:rgba(0,10,40,0.85); border:1px solid #6af; border-radius:10px; padding:0.4rem 1.2rem; color:#9df; font:bold 1rem system-ui,sans-serif; z-index:15; letter-spacing:0.04em;">Round 1</div>
+
+  <!-- Round message overlay -->
+  <div id="roundMsg" style="display:none; position:fixed; top:35%; left:50%; transform:translateX(-50%); background:rgba(0,10,40,0.92); border:1px solid #ffe066; border-radius:12px; padding:0.8rem 2.4rem; font:bold 1.3rem system-ui,sans-serif; z-index:20; text-align:center; white-space:nowrap; letter-spacing:0.04em;"></div>
+
+  <!-- Dig indicator -->
+  <div id="digIndicator">🦊 Right-click to dig &nbsp;&middot;&nbsp; Hold for tunnels</div>
+
+  <!-- Controls hint -->
+  <div id="hud">
+    WASD / Arrows &nbsp;&middot;&nbsp; Space to jump &nbsp;&middot;&nbsp; Click to aim (ESC to release) &nbsp;&middot;&nbsp; Right-click to dig &nbsp;&middot;&nbsp; Scroll to zoom
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
