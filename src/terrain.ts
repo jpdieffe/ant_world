@@ -318,21 +318,61 @@ class TerrainChunk {
     return this.density[this.idx(x, y, z)]
   }
 
-  /** Find the surface Y at a given world (x, z) by scanning down the density column */
-  getSurfaceY(wx: number, wz: number): number {
-    const gx = Math.round((wx - this.originX) / CELL_SIZE)
-    const gz = Math.round((wz - this.originZ) / CELL_SIZE)
-
-    if (gx < 0 || gx >= CHUNK_SAMPLES || gz < 0 || gz >= CHUNK_SAMPLES) return 0
-
-    // Scan from top to bottom, find the first solid cell
+  /** Helper: find exact surface Y for a single density column (top-down scan) */
+  private columnSurfaceY(gx: number, gz: number): number {
     for (let y = VERT_SAMPLES - 1; y >= 0; y--) {
-      if (this.density[this.idx(gx, y, gz)] > 0) {
-        // Add half a cell so the player stands on the interpolated surface, not the sample point
+      const d = this.density[this.idx(gx, y, gz)]
+      if (d > 0) {
+        // Interpolate the zero-crossing between solid cell y and air cell y+1
+        if (y < VERT_SAMPLES - 1) {
+          const dAbove = this.density[this.idx(gx, y + 1, gz)]
+          if (dAbove < 0) {
+            const t = d / (d - dAbove)
+            return this.originY + (y + t) * CELL_SIZE
+          }
+        }
         return this.originY + (y + 0.5) * CELL_SIZE
       }
     }
     return this.originY
+  }
+
+  /** Helper: find exact surface Y for a column scanning down from startGy */
+  private columnSurfaceYBelow(gx: number, gz: number, startGy: number): number {
+    for (let y = startGy; y >= 0; y--) {
+      const d = this.density[this.idx(gx, y, gz)]
+      if (d > 0) {
+        if (y < VERT_SAMPLES - 1) {
+          const dAbove = this.density[this.idx(gx, y + 1, gz)]
+          if (dAbove < 0) {
+            const t = d / (d - dAbove)
+            return this.originY + (y + t) * CELL_SIZE
+          }
+        }
+        return this.originY + (y + 0.5) * CELL_SIZE
+      }
+    }
+    return this.originY
+  }
+
+  /** Find the surface Y at a given world (x, z) — bilinear interpolation across 4 columns */
+  getSurfaceY(wx: number, wz: number): number {
+    const gxf = (wx - this.originX) / CELL_SIZE
+    const gzf = (wz - this.originZ) / CELL_SIZE
+    const gx0 = Math.max(0, Math.min(CHUNK_SAMPLES - 2, Math.floor(gxf)))
+    const gx1 = gx0 + 1
+    const gz0 = Math.max(0, Math.min(CHUNK_SAMPLES - 2, Math.floor(gzf)))
+    const gz1 = gz0 + 1
+    const fx = Math.max(0, Math.min(1, gxf - gx0))
+    const fz = Math.max(0, Math.min(1, gzf - gz0))
+
+    const y00 = this.columnSurfaceY(gx0, gz0)
+    const y10 = this.columnSurfaceY(gx1, gz0)
+    const y01 = this.columnSurfaceY(gx0, gz1)
+    const y11 = this.columnSurfaceY(gx1, gz1)
+
+    return y00 * (1 - fx) * (1 - fz) + y10 * fx * (1 - fz) +
+           y01 * (1 - fx) * fz + y11 * fx * fz
   }
 
   /**
@@ -340,21 +380,24 @@ class TerrainChunk {
    * Scans downward from startY so tunnels beneath higher terrain are respected.
    */
   getSurfaceYBelow(wx: number, wz: number, startY: number): number {
-    const gx = Math.round((wx - this.originX) / CELL_SIZE)
-    const gz = Math.round((wz - this.originZ) / CELL_SIZE)
+    const gxf = (wx - this.originX) / CELL_SIZE
+    const gzf = (wz - this.originZ) / CELL_SIZE
+    const gx0 = Math.max(0, Math.min(CHUNK_SAMPLES - 2, Math.floor(gxf)))
+    const gx1 = gx0 + 1
+    const gz0 = Math.max(0, Math.min(CHUNK_SAMPLES - 2, Math.floor(gzf)))
+    const gz1 = gz0 + 1
+    const fx = Math.max(0, Math.min(1, gxf - gx0))
+    const fz = Math.max(0, Math.min(1, gzf - gz0))
 
-    if (gx < 0 || gx >= CHUNK_SAMPLES || gz < 0 || gz >= CHUNK_SAMPLES) return this.originY
-
-    // Convert startY to grid Y index
     const startGy = Math.min(VERT_SAMPLES - 1, Math.round((startY - this.originY) / CELL_SIZE))
 
-    // Scan downward: find an air→solid transition (top of solid below player)
-    for (let y = startGy; y >= 0; y--) {
-      if (this.density[this.idx(gx, y, gz)] > 0) {
-        return this.originY + (y + 0.5) * CELL_SIZE
-      }
-    }
-    return this.originY
+    const y00 = this.columnSurfaceYBelow(gx0, gz0, startGy)
+    const y10 = this.columnSurfaceYBelow(gx1, gz0, startGy)
+    const y01 = this.columnSurfaceYBelow(gx0, gz1, startGy)
+    const y11 = this.columnSurfaceYBelow(gx1, gz1, startGy)
+
+    return y00 * (1 - fx) * (1 - fz) + y10 * fx * (1 - fz) +
+           y01 * (1 - fx) * fz + y11 * fx * fz
   }
 
   /** Rebuild the mesh from current density data */

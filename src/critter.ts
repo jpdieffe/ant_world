@@ -20,8 +20,8 @@ interface CritterConfig {
 }
 
 const CONFIGS: Record<CritterType, CritterConfig> = {
-  spider:  { scale: 10, speed: 6, wanderRadius: 80, pauseMin: 0.5, pauseMax: 2 },
-  pillbug: { scale: 12, speed: 2, wanderRadius: 50, pauseMin: 2,   pauseMax: 5 },
+  spider:  { scale: 30, speed: 6, wanderRadius: 80, pauseMin: 0.5, pauseMax: 2 },
+  pillbug: { scale: 6,  speed: 2, wanderRadius: 50, pauseMin: 2,   pauseMax: 5 },
 }
 
 function meshBottomY(meshes: AbstractMesh[]): number {
