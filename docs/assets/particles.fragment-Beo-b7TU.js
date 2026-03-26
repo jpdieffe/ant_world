@@ -1,1 +1,0 @@
-import{bn as e}from"./index-DdtbPEOJ.js";export{e as particlesPixelShader};

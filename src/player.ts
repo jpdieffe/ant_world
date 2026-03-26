@@ -307,10 +307,11 @@ export class Player {
         this.velocity.z = 0
       }
 
-      // Landing check
+      // Landing check — scan from FEET level downward, not from head,
+      // so tunnel ceilings above aren't mistaken for the floor below.
       const surfBelow = this.terrain.getSurfaceYBelow(
         this.position.x, this.position.z,
-        this.position.y + PLAYER_HEIGHT,
+        this.position.y + 0.5,
       )
       if (this.position.y <= surfBelow + GROUND_SNAP && this.velocity.y <= 0) {
         this.position.y = surfBelow + GROUND_SNAP

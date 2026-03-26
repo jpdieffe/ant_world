@@ -62,7 +62,7 @@ export class Enemy {
   private spawnPos = new Vector3()
   private root: TransformNode | null = null
   private yOffset = 0
-  private facingY = 0
+  facingY = 0
   private chasing = false
   private animGroups = new Map<string, AnimationGroup>()
   private currentAnimName = ''
@@ -261,5 +261,15 @@ export class Enemy {
     }
     for (const b of this.bullets) b.mesh.dispose()
     this.bullets.length = 0
+  }
+
+  /** Apply position from host (joiner only) */
+  applyNetState(x: number, y: number, z: number, ry: number): void {
+    this.position.set(x, y, z)
+    this.facingY = ry
+    if (this.root) {
+      this.root.position.set(x, y + this.yOffset, z)
+      this.root.rotation.y = ry
+    }
   }
 }

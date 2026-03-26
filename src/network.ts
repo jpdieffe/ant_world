@@ -1,6 +1,6 @@
 import Peer from 'peerjs'
 import type { DataConnection } from 'peerjs'
-import type { NetMessage, PlayerState, DigEvent } from './types'
+import type { NetMessage, PlayerState, DigEvent, NpcNetState } from './types'
 
 const PEER_SERVER = {
   host: '0.peerjs.com',
@@ -40,6 +40,7 @@ export class Network {
   pendingDigs: DigEvent[] = []
   pendingRound: number | null = null
   pendingCaught = false
+  pendingNpcs: { enemies: NpcNetState[]; critters: NpcNetState[] } | null = null
   isHost = false
 
   onPeerConnected: (() => void) | null = null
@@ -136,6 +137,8 @@ export class Network {
         this.pendingRound = msg.round
       } else if (msg.type === 'caught') {
         this.pendingCaught = true
+      } else if (msg.type === 'npcs') {
+        this.pendingNpcs = { enemies: msg.enemies, critters: msg.critters }
       }
     })
     conn.on('close', () => {
@@ -171,6 +174,13 @@ export class Network {
   sendCaught() {
     if (this.conn?.open) {
       const msg: NetMessage = { type: 'caught' }
+      this.conn.send(msg)
+    }
+  }
+
+  sendNpcs(enemies: NpcNetState[], critters: NpcNetState[]) {
+    if (this.conn?.open) {
+      const msg: NetMessage = { type: 'npcs', enemies, critters }
       this.conn.send(msg)
     }
   }

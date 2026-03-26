@@ -54,7 +54,7 @@ export class Critter {
   private pauseTimer = 0
   private targetX = 0
   private targetZ = 0
-  private facingY = 0
+  facingY = 0
 
   private readonly cfg: CritterConfig
   private readonly spawnX: number
@@ -194,6 +194,18 @@ export class Critter {
     if (this.idleRoot) {
       this.idleRoot.getChildMeshes(true).forEach(m => m.dispose())
       this.idleRoot.dispose()
+    }
+  }
+
+  /** Apply position from host (joiner only) */
+  applyNetState(x: number, y: number, z: number, ry: number): void {
+    this.position.set(x, y, z)
+    this.facingY = ry
+    const activeRoot = this.moving ? this.walkRoot : this.idleRoot
+    const activeYOff = this.moving ? this.walkYOff : this.idleYOff
+    if (activeRoot) {
+      activeRoot.position.set(x, y - activeYOff, z)
+      activeRoot.rotation.y = ry
     }
   }
 }

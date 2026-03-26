@@ -224,7 +224,8 @@ async function startGame() {
   // ── Network send timer ────────────────────────────────────────────────────
   const SEND_INTERVAL = 1 / 20
   let sendTimer = 0
-
+  const NPC_SEND_INTERVAL = 1 / 10
+  let npcSendTimer = 0
   // ── Input ─────────────────────────────────────────────────────────────────
   let digging = false
   canvas.addEventListener('mousedown', (e) => { if (e.button === 2) digging = true })
@@ -271,13 +272,38 @@ async function startGame() {
 
         // ── Enemy AI ───────────────────────────────────────────────────────
         if (roundActive) {
-          const remoteVec = network.lastRemoteState
-            ? new Vector3(network.lastRemoteState.x, network.lastRemoteState.y, network.lastRemoteState.z)
-            : null
-          for (const enemy of enemies) {
-            enemy.update(dt, player.position, remoteVec)
+          if (network.isHost || !network.isConnected()) {
+            // Host (or solo) runs AI and broadcasts NPC state
+            const remoteVec = network.lastRemoteState
+              ? new Vector3(network.lastRemoteState.x, network.lastRemoteState.y, network.lastRemoteState.z)
+              : null
+            for (const enemy of enemies) {
+              enemy.update(dt, player.position, remoteVec)
+            }
+            for (const c of critters) c.update(dt)
+
+            // Broadcast NPC positions to joiner
+            npcSendTimer += dt
+            if (npcSendTimer >= NPC_SEND_INTERVAL && network.isConnected()) {
+              npcSendTimer = 0
+              network.sendNpcs(
+                enemies.map(e => ({ x: e.position.x, y: e.position.y, z: e.position.z, ry: e.facingY })),
+                critters.map(c => ({ x: c.position.x, y: c.position.y, z: c.position.z, ry: c.facingY })),
+              )
+            }
+          } else {
+            // Joiner: apply host NPC positions instead of running AI
+            if (network.pendingNpcs) {
+              const { enemies: eStates, critters: cStates } = network.pendingNpcs
+              for (let i = 0; i < Math.min(enemies.length, eStates.length); i++) {
+                enemies[i].applyNetState(eStates[i].x, eStates[i].y, eStates[i].z, eStates[i].ry)
+              }
+              for (let i = 0; i < Math.min(critters.length, cStates.length); i++) {
+                critters[i].applyNetState(cStates[i].x, cStates[i].y, cStates[i].z, cStates[i].ry)
+              }
+              network.pendingNpcs = null
+            }
           }
-          for (const c of critters) c.update(dt)
         }
       }
 

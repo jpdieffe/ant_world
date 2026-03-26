@@ -15,13 +15,13 @@ import type { PlayerState, AnimState } from './types'
 
 const PLAYER_HEIGHT = 1.2
 const LERP_SPEED    = 15
-const FOX_SCALE     = 1.8
+const ANT_SCALE     = 2.16
 
-const FOX_ANIM_FILES: Record<AnimState, string> = {
-  idle: './assets/fox/idle.glb',
-  walk: './assets/fox/run.glb',
-  jump: './assets/fox/jump.glb',
-  fall: './assets/fox/fall.glb',
+const ANT_ANIM_FILES: Record<AnimState, string> = {
+  idle: './assets/ant/idle.glb',
+  walk: './assets/ant/walk.glb',
+  jump: './assets/ant/jump.glb',
+  fall: './assets/ant/fall.glb',
 }
 
 function meshBottomY(meshes: AbstractMesh[]): number {
@@ -66,7 +66,7 @@ export class RemotePlayer {
 
   private async loadAllAnims() {
     await Promise.all(
-      Object.entries(FOX_ANIM_FILES).map(([s, f]) =>
+      Object.entries(ANT_ANIM_FILES).map(([s, f]) =>
         this.loadAnimInto(s as AnimState, f)),
     )
     const entry = this.entries[this.currentAnim]
@@ -80,9 +80,9 @@ export class RemotePlayer {
     try {
       const noLoop = state === 'jump'
       const result = await SceneLoader.ImportMeshAsync('', '', file, this.scene)
-      const root   = new TransformNode(`remote_fox_${state}`, this.scene)
+      const root   = new TransformNode(`remote_ant_${state}`, this.scene)
       result.meshes.forEach((m: AbstractMesh) => { if (!m.parent) m.parent = root })
-      root.scaling.setAll(FOX_SCALE)
+      root.scaling.setAll(ANT_SCALE)
       root.position.setAll(0)
       this.scene.incrementRenderId()
       result.meshes.forEach((m: AbstractMesh) => m.computeWorldMatrix(true))

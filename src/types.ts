@@ -23,9 +23,15 @@ export interface EnemyNetState {
   chasing: boolean
 }
 
+/** Compact NPC position for network sync */
+export interface NpcNetState {
+  x: number; y: number; z: number; ry: number
+}
+
 /** Network message envelope */
 export type NetMessage =
   | { type: 'state'; state: PlayerState }
   | { type: 'dig'; dig: DigEvent }
   | { type: 'round'; round: number }
   | { type: 'caught' }
+  | { type: 'npcs'; enemies: NpcNetState[]; critters: NpcNetState[] }
