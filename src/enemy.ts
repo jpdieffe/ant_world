@@ -148,55 +148,22 @@ export class Enemy {
       if (dRemote < dLocal) targetPos = remotePos
     }
 
-    const dx = targetPos.x - this.position.x
-    const dy = targetPos.y - this.position.y
-    const dz = targetPos.z - this.position.z
-    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
-
-    if (dist < this.cfg.detectRange) {
-      this.chasing = true
-      const angle = Math.atan2(dx, dz)
-      this.facingY = angle
-      const speed = this.cfg.chaseSpeed * dt
-
-      if (this.cfg.flies) {
-        if (dist > this.cfg.catchDist) {
-          const nx = dx / dist, ny = dy / dist, nz = dz / dist
-          this.position.x += nx * speed
-          this.position.y += ny * speed
-          this.position.z += nz * speed
-        }
-      } else {
-        this.position.x += Math.sin(angle) * speed
-        this.position.z += Math.cos(angle) * speed
-      }
-      this.playAnim('run')
-
-      // Shooting
-      if (this.cfg.shootInterval > 0) {
-        this.shootTimer -= dt
-        if (this.shootTimer <= 0) {
-          this.shootTimer = this.cfg.shootInterval
-          this.spawnBullet(targetPos)
-        }
-      }
+    // Patrol only — no chasing
+    this.chasing = false
+    this.patrolAngle += dt * 0.3
+    const px = this.spawnPos.x + Math.sin(this.patrolAngle) * 20
+    const pz = this.spawnPos.z + Math.cos(this.patrolAngle) * 20
+    const pdx = px - this.position.x
+    const pdz = pz - this.position.z
+    const pDist = Math.sqrt(pdx * pdx + pdz * pdz)
+    if (pDist > 0.5) {
+      this.facingY = Math.atan2(pdx, pdz)
+      const speed = Math.min(this.cfg.patrolSpeed * dt, pDist)
+      this.position.x += (pdx / pDist) * speed
+      this.position.z += (pdz / pDist) * speed
+      this.playAnim('walk')
     } else {
-      this.chasing = false
-      this.patrolAngle += dt * 0.3
-      const px = this.spawnPos.x + Math.sin(this.patrolAngle) * 20
-      const pz = this.spawnPos.z + Math.cos(this.patrolAngle) * 20
-      const pdx = px - this.position.x
-      const pdz = pz - this.position.z
-      const pDist = Math.sqrt(pdx * pdx + pdz * pdz)
-      if (pDist > 0.5) {
-        this.facingY = Math.atan2(pdx, pdz)
-        const speed = Math.min(this.cfg.patrolSpeed * dt, pDist)
-        this.position.x += (pdx / pDist) * speed
-        this.position.z += (pdz / pDist) * speed
-        this.playAnim('walk')
-      } else {
-        this.playAnim('idle')
-      }
+      this.playAnim('idle')
     }
 
     // Ground/fly snap
@@ -215,8 +182,7 @@ export class Enemy {
 
     this.updateBullets(dt)
 
-    const catchDist = Vector3.Distance(playerPos, this.position)
-    return catchDist < this.cfg.catchDist && this.chasing
+    return false
   }
 
   /** Check if any bullet hit the player */
