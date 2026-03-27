@@ -104,23 +104,23 @@ export class Player {
   }
 
   private createArrow(): void {
-    // Shaft (rectangular box along +Z)
-    const shaft = MeshBuilder.CreateBox('arrowShaft', {
-      width: 0.3,
-      height: 0.12,
-      depth: 1.8,
-    }, this.scene)
-    shaft.position.z = 0.9
-
-    // Head (cone)
+    // Head (cone) — sits behind, point faces +Z
     const head = MeshBuilder.CreateCylinder('arrowHead', {
       height: 0.7,
       diameterTop: 0,
       diameterBottom: 0.7,
       tessellation: 8,
     }, this.scene)
-    head.rotation.x = -Math.PI / 2
-    head.position.z = 2.15
+    head.rotation.x = Math.PI / 2
+    head.position.z = 0.35
+
+    // Shaft (rectangular box along +Z) — in front of head
+    const shaft = MeshBuilder.CreateBox('arrowShaft', {
+      width: 0.3,
+      height: 0.12,
+      depth: 1.8,
+    }, this.scene)
+    shaft.position.z = 0.7 + 0.9
 
     // Merge into one mesh
     const arrow = Mesh.MergeMeshes([shaft, head], true, true, undefined, false, true)!
