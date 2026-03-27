@@ -502,7 +502,7 @@ export class Player {
 
   /**
    * Get the camera origin and look direction for raycasting (e.g. digging).
-   * Works correctly for all three camera modes.
+   * Works correctly for all four camera modes.
    */
   getCameraRay(): { origin: Vector3; dir: Vector3 } {
     const cam = this.camera
@@ -514,6 +514,12 @@ export class Player {
         origin: cam.position.clone(),
         dir:    new Vector3(-sb * ca, -cb, -sb * sa),
       }
+    }
+    if (this.cameraMode === 4) {
+      // Mode 4: ray from player eye toward crosshair direction so dig works at any zoom
+      const eyePos = new Vector3(this.position.x, this.position.y + PLAYER_HEIGHT * 0.85, this.position.z)
+      const dir = cam.target.subtract(cam.position).normalize()
+      return { origin: eyePos, dir }
     }
     return {
       origin: cam.position.clone(),

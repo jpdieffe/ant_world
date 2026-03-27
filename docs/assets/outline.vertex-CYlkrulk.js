@@ -1,0 +1,1 @@
+import{O as e}from"./index-BQiSGjv4.js";export{e as outlineVertexShaderWGSL};
