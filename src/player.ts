@@ -119,7 +119,7 @@ export class Player {
       diameterBottom: 0.7,
       tessellation: 8,
     }, this.scene)
-    head.rotation.x = Math.PI / 2
+    head.rotation.x = -Math.PI / 2
     head.position.z = 2.15
 
     // Merge into one mesh
