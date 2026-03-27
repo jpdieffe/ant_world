@@ -104,24 +104,23 @@ export class Player {
   }
 
   private createArrow(): void {
-    // Shaft (cylinder rotated to point along +Z)
-    const shaft = MeshBuilder.CreateCylinder('arrowShaft', {
-      height: 1.8,
-      diameter: 0.18,
-      tessellation: 8,
+    // Shaft (rectangular box along +Z)
+    const shaft = MeshBuilder.CreateBox('arrowShaft', {
+      width: 0.3,
+      height: 0.12,
+      depth: 1.8,
     }, this.scene)
-    shaft.rotation.x = Math.PI / 2
     shaft.position.z = 0.9
 
     // Head (cone)
     const head = MeshBuilder.CreateCylinder('arrowHead', {
-      height: 0.6,
+      height: 0.7,
       diameterTop: 0,
-      diameterBottom: 0.5,
+      diameterBottom: 0.7,
       tessellation: 8,
     }, this.scene)
     head.rotation.x = Math.PI / 2
-    head.position.z = 2.1
+    head.position.z = 2.15
 
     // Merge into one mesh
     const arrow = Mesh.MergeMeshes([shaft, head], true, true, undefined, false, true)!
@@ -192,9 +191,9 @@ export class Player {
       cam.upperRadiusLimit = null  // allow large radius for FPS trick
     } else if (m === 4) {
       // Reset offsets on entry
-      this.cam4Radius = 26.5
+      this.cam4Radius = 43.9
       this.cam4OffsetX = 0
-      this.cam4OffsetY = 3.4
+      this.cam4OffsetY = 9.5
       this.cam4BetaOffset = 0
       this.cam4DigPitch = 0
       cam.lowerBetaLimit = 0.15

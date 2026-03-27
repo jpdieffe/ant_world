@@ -1,0 +1,1 @@
+import{Zn as e}from"./index-CqVT07kh.js";export{e as lightProxyVertexShaderWGSL};
