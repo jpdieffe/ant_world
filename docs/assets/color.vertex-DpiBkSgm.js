@@ -1,0 +1,1 @@
+import{Gn as e}from"./index-DIiKKd67.js";export{e as colorVertexShader};

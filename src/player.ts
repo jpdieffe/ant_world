@@ -130,8 +130,10 @@ export class Player {
     mat.diffuseColor = new Color3(1, 0.15, 0.1)
     mat.emissiveColor = new Color3(0.6, 0.05, 0.03)
     mat.disableLighting = true
+    mat.disableDepthWrite = true
     arrow.material = mat
     arrow.isPickable = false
+    arrow.renderingGroupId = 1
 
     this.arrowMesh = arrow
   }
@@ -456,7 +458,12 @@ export class Player {
           this.position.y + PLAYER_HEIGHT + 0.8,
           this.position.z,
         )
+        // Compute dig pitch from camera direction
+        const cam = this.camera
+        const digDir = cam.target.subtract(cam.position).normalize()
+        const pitch = Math.asin(Math.max(-1, Math.min(1, digDir.y)))
         this.arrowMesh.rotation.y = this.facingY
+        this.arrowMesh.rotation.x = -pitch
       }
     }
 
