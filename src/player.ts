@@ -129,8 +129,8 @@ export class Player {
 
     const mat = new StandardMaterial('arrowMat', this.scene)
     mat.diffuseColor = new Color3(1, 0.15, 0.1)
-    mat.emissiveColor = new Color3(0.6, 0.05, 0.03)
-    mat.disableLighting = true
+    mat.specularColor = new Color3(0.4, 0.1, 0.05)
+    mat.emissiveColor = new Color3(0.25, 0.02, 0.01)
     mat.disableDepthWrite = true
     arrow.material = mat
     arrow.isPickable = false
@@ -192,9 +192,9 @@ export class Player {
       cam.upperRadiusLimit = null  // allow large radius for FPS trick
     } else if (m === 4) {
       // Reset offsets on entry
-      this.cam4Radius = 14
+      this.cam4Radius = 26.5
       this.cam4OffsetX = 0
-      this.cam4OffsetY = 0
+      this.cam4OffsetY = 3.4
       this.cam4BetaOffset = 0
       this.cam4DigPitch = 0
       cam.lowerBetaLimit = 0.15
