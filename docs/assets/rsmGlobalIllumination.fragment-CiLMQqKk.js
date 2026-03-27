@@ -1,0 +1,1 @@
+import{G as e}from"./index-BvTMbJnn.js";export{e as rsmGlobalIlluminationPixelShaderWGSL};

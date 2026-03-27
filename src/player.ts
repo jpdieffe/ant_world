@@ -449,17 +449,23 @@ export class Player {
       this.modelRoot.rotation.y = this.facingY
     }
 
-    // ── Facing arrow ────────────────────────────────────────────────────────
+    // ── Facing arrow (HUD-style, fixed at top of screen) ──────────────────
     if (this.arrowMesh) {
       this.arrowMesh.setEnabled(this.cameraMode === 4)
       if (this.cameraMode === 4) {
-        this.arrowMesh.position.set(
-          this.position.x,
-          this.position.y + PLAYER_HEIGHT + 0.8,
-          this.position.z,
-        )
-        // Compute dig pitch from camera direction
         const cam = this.camera
+        // Place arrow a fixed distance in front of the camera, near the top of the viewport
+        const fwd = cam.getForwardRay().direction
+        const up = cam.upVector
+        const right = Vector3.Cross(fwd, up).normalize()
+        const trueUp = Vector3.Cross(right, fwd).normalize()
+        const dist = 4          // distance in front of camera
+        const upShift = 1.3     // shift upward on screen
+        const arrowPos = cam.position.add(fwd.scale(dist)).add(trueUp.scale(upShift))
+        this.arrowMesh.position.copyFrom(arrowPos)
+        this.arrowMesh.scaling.setAll(0.35)
+
+        // Compute dig pitch from camera look direction
         const digDir = cam.target.subtract(cam.position).normalize()
         const pitch = Math.asin(Math.max(-1, Math.min(1, digDir.y)))
         this.arrowMesh.rotation.y = this.facingY

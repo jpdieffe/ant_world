@@ -1,0 +1,1 @@
+import{d as e}from"./index-BvTMbJnn.js";export{e as spritesPixelShaderWGSL};

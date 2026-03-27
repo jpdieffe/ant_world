@@ -1,0 +1,1 @@
+import{r as e}from"./index-BvTMbJnn.js";export{e as OpenPBRMaterialLoadingAdapter};
