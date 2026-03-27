@@ -8,6 +8,9 @@ import {
   AbstractMesh,
   AnimationGroup,
   Mesh,
+  MeshBuilder,
+  StandardMaterial,
+  Color3,
 } from '@babylonjs/core'
 import type { Terrain } from './terrain'
 import type { AnimState, PlayerState } from './types'
@@ -85,8 +88,9 @@ export class Player {
   private cam4Radius = 14
   private cam4OffsetX = 0
   private cam4OffsetY = 0
-  private cam4Beta = 0
+  private cam4BetaOffset = 0
   private cam4InfoEl: HTMLElement | null = null
+  private arrowMesh: Mesh | null = null
 
   constructor(scene: Scene, terrain: Terrain) {
     this.scene = scene
@@ -95,6 +99,41 @@ export class Player {
     this.setupCamera()
     this.setupInput()
     this.loadModel()
+    this.createArrow()
+  }
+
+  private createArrow(): void {
+    // Shaft (cylinder rotated to point along +Z)
+    const shaft = MeshBuilder.CreateCylinder('arrowShaft', {
+      height: 1.8,
+      diameter: 0.18,
+      tessellation: 8,
+    }, this.scene)
+    shaft.rotation.x = Math.PI / 2
+    shaft.position.z = 0.9
+
+    // Head (cone)
+    const head = MeshBuilder.CreateCylinder('arrowHead', {
+      height: 0.6,
+      diameterTop: 0,
+      diameterBottom: 0.5,
+      tessellation: 8,
+    }, this.scene)
+    head.rotation.x = Math.PI / 2
+    head.position.z = 2.1
+
+    // Merge into one mesh
+    const arrow = Mesh.MergeMeshes([shaft, head], true, true, undefined, false, true)!
+    arrow.name = 'facingArrow'
+
+    const mat = new StandardMaterial('arrowMat', this.scene)
+    mat.diffuseColor = new Color3(1, 0.15, 0.1)
+    mat.emissiveColor = new Color3(0.6, 0.05, 0.03)
+    mat.disableLighting = true
+    arrow.material = mat
+    arrow.isPickable = false
+
+    this.arrowMesh = arrow
   }
 
   // ── Camera ───────────────────────────────────────────────────────────────────
@@ -147,7 +186,7 @@ export class Player {
       this.cam4Radius = 14
       this.cam4OffsetX = 0
       this.cam4OffsetY = 0
-      this.cam4Beta = 0
+      this.cam4BetaOffset = 0
       cam.lowerBetaLimit = 0.15
       cam.upperBetaLimit = Math.PI * 0.85
       cam.upperRadiusLimit = 60
@@ -252,8 +291,8 @@ export class Player {
       if (this.keys.has('i')) this.cam4OffsetY += panSpeed * dt
       if (this.keys.has('k')) this.cam4OffsetY -= panSpeed * dt
       const rotSpeed = 1.5
-      if (this.keys.has('o')) this.cam4Beta = Math.max(0.15, this.cam4Beta - rotSpeed * dt)
-      if (this.keys.has('p')) this.cam4Beta = Math.min(Math.PI * 0.85, this.cam4Beta + rotSpeed * dt)
+      if (this.keys.has('o')) this.cam4BetaOffset -= rotSpeed * dt
+      if (this.keys.has('p')) this.cam4BetaOffset += rotSpeed * dt
     }
 
     // ── Camera-derived directions ──────────────────────────────────────────
@@ -408,6 +447,19 @@ export class Player {
       this.modelRoot.rotation.y = this.facingY
     }
 
+    // ── Facing arrow ────────────────────────────────────────────────────────
+    if (this.arrowMesh) {
+      this.arrowMesh.setEnabled(this.cameraMode === 4)
+      if (this.cameraMode === 4) {
+        this.arrowMesh.position.set(
+          this.position.x,
+          this.position.y + PLAYER_HEIGHT + 0.8,
+          this.position.z,
+        )
+        this.arrowMesh.rotation.y = this.facingY
+      }
+    }
+
     // ── Camera update ───────────────────────────────────────────────────
     if (this.cameraMode === 3) {
       // FPS: camera sits FPS_BACK units behind the eye to avoid terrain clipping on slopes.
@@ -442,13 +494,17 @@ export class Player {
         this.camera.radius = this.cam4Radius
         this.camera.target.x += this.cam4OffsetX
         this.camera.target.y += this.cam4OffsetY
-        if (this.cam4Beta !== 0) this.camera.beta = this.cam4Beta
+        this.camera.beta += this.cam4BetaOffset
+        const bLo = this.camera.lowerBetaLimit ?? 0.15
+        const bHi = this.camera.upperBetaLimit ?? Math.PI * 0.85
+        if (this.camera.beta < bLo) this.camera.beta = bLo
+        if (this.camera.beta > bHi) this.camera.beta = bHi
         if (this.cam4InfoEl) {
           this.cam4InfoEl.textContent =
-            `CAM4  radius: ${this.cam4Radius.toFixed(2)}\n` +
-            `      offX:   ${this.cam4OffsetX.toFixed(2)}\n` +
-            `      offY:   ${this.cam4OffsetY.toFixed(2)}\n` +
-            `      beta:   ${this.cam4Beta.toFixed(2)}`
+            `CAM4  radius:  ${this.cam4Radius.toFixed(2)}\n` +
+            `      offX:    ${this.cam4OffsetX.toFixed(2)}\n` +
+            `      offY:    ${this.cam4OffsetY.toFixed(2)}\n` +
+            `      betaOff: ${this.cam4BetaOffset.toFixed(2)}`
         }
       } else {
         // ── Mode 2: fixed orbit — ignore terrain, stay at desired radius ───
