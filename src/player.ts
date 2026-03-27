@@ -89,6 +89,7 @@ export class Player {
   private cam4OffsetX = 0
   private cam4OffsetY = 0
   private cam4BetaOffset = 0
+  private cam4DigPitch = 0
   private cam4InfoEl: HTMLElement | null = null
   private arrowMesh: Mesh | null = null
 
@@ -165,11 +166,17 @@ export class Player {
       if (document.pointerLockElement !== canvas) return
       const sens = 0.004
       cam.alpha -= e.movementX * sens
-      cam.beta  -= e.movementY * sens
-      const bLo = cam.lowerBetaLimit ?? 0.15
-      const bHi = cam.upperBetaLimit ?? Math.PI * 0.85
-      if (cam.beta < bLo) cam.beta = bLo
-      if (cam.beta > bHi) cam.beta = bHi
+      if (this.cameraMode === 4) {
+        // Mode 4: mouse Y controls dig pitch, not camera beta
+        this.cam4DigPitch += e.movementY * sens
+        this.cam4DigPitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, this.cam4DigPitch))
+      } else {
+        cam.beta  -= e.movementY * sens
+        const bLo = cam.lowerBetaLimit ?? 0.15
+        const bHi = cam.upperBetaLimit ?? Math.PI * 0.85
+        if (cam.beta < bLo) cam.beta = bLo
+        if (cam.beta > bHi) cam.beta = bHi
+      }
     })
   }
 
@@ -189,6 +196,7 @@ export class Player {
       this.cam4OffsetX = 0
       this.cam4OffsetY = 0
       this.cam4BetaOffset = 0
+      this.cam4DigPitch = 0
       cam.lowerBetaLimit = 0.15
       cam.upperBetaLimit = Math.PI * 0.85
       cam.upperRadiusLimit = 60
@@ -465,11 +473,10 @@ export class Player {
         this.arrowMesh.position.copyFrom(arrowPos)
         this.arrowMesh.scaling.setAll(0.35)
 
-        // Compute dig pitch from camera look direction
-        const digDir = cam.target.subtract(cam.position).normalize()
-        const pitch = Math.asin(Math.max(-1, Math.min(1, digDir.y)))
+        // Compute dig pitch from separate mouse-controlled value
+        const pitch = this.cam4DigPitch
         this.arrowMesh.rotation.y = this.facingY
-        this.arrowMesh.rotation.x = -pitch
+        this.arrowMesh.rotation.x = pitch
       }
     }
 
@@ -585,9 +592,15 @@ export class Player {
       }
     }
     if (this.cameraMode === 4) {
-      // Mode 4: ray from player eye toward crosshair direction so dig works at any zoom
+      // Mode 4: ray from player eye using separate dig pitch
       const eyePos = new Vector3(this.position.x, this.position.y + PLAYER_HEIGHT * 0.85, this.position.z)
-      const dir = cam.target.subtract(cam.position).normalize()
+      const cosPitch = Math.cos(this.cam4DigPitch)
+      const sinPitch = Math.sin(this.cam4DigPitch)
+      const dir = new Vector3(
+        Math.sin(this.facingY) * cosPitch,
+        -sinPitch,
+        Math.cos(this.facingY) * cosPitch,
+      )
       return { origin: eyePos, dir }
     }
     return {

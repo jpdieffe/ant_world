@@ -1,1 +1,0 @@
-import{Ot as e}from"./index-BvTMbJnn.js";export{e as blackAndWhitePixelShaderWGSL};

@@ -1,1 +1,0 @@
-import{er as e}from"./index-BvTMbJnn.js";export{e as lightProxyPixelShader};
