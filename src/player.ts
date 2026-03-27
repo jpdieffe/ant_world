@@ -85,6 +85,7 @@ export class Player {
   private cam4Radius = 14
   private cam4OffsetX = 0
   private cam4OffsetY = 0
+  private cam4Beta = 0
   private cam4InfoEl: HTMLElement | null = null
 
   constructor(scene: Scene, terrain: Terrain) {
@@ -146,6 +147,7 @@ export class Player {
       this.cam4Radius = 14
       this.cam4OffsetX = 0
       this.cam4OffsetY = 0
+      this.cam4Beta = 0
       cam.lowerBetaLimit = 0.15
       cam.upperBetaLimit = Math.PI * 0.85
       cam.upperRadiusLimit = 60
@@ -249,6 +251,9 @@ export class Player {
       if (this.keys.has('l')) this.cam4OffsetX += panSpeed * dt
       if (this.keys.has('i')) this.cam4OffsetY += panSpeed * dt
       if (this.keys.has('k')) this.cam4OffsetY -= panSpeed * dt
+      const rotSpeed = 1.5
+      if (this.keys.has('o')) this.cam4Beta = Math.max(0.15, this.cam4Beta - rotSpeed * dt)
+      if (this.keys.has('p')) this.cam4Beta = Math.min(Math.PI * 0.85, this.cam4Beta + rotSpeed * dt)
     }
 
     // ── Camera-derived directions ──────────────────────────────────────────
@@ -437,11 +442,13 @@ export class Player {
         this.camera.radius = this.cam4Radius
         this.camera.target.x += this.cam4OffsetX
         this.camera.target.y += this.cam4OffsetY
+        if (this.cam4Beta !== 0) this.camera.beta = this.cam4Beta
         if (this.cam4InfoEl) {
           this.cam4InfoEl.textContent =
             `CAM4  radius: ${this.cam4Radius.toFixed(2)}\n` +
             `      offX:   ${this.cam4OffsetX.toFixed(2)}\n` +
-            `      offY:   ${this.cam4OffsetY.toFixed(2)}`
+            `      offY:   ${this.cam4OffsetY.toFixed(2)}\n` +
+            `      beta:   ${this.cam4Beta.toFixed(2)}`
         }
       } else {
         // ── Mode 2: fixed orbit — ignore terrain, stay at desired radius ───

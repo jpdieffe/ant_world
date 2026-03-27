@@ -1,0 +1,1 @@
+import{Zn as e}from"./index-CNajbS4e.js";export{e as lightProxyVertexShaderWGSL};
