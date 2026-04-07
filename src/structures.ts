@@ -58,9 +58,8 @@ export function createHouseCorner(scene: Scene, terrain: Terrain, x: number, z: 
   slabMat.specularColor = new Color3(0.05, 0.05, 0.05)
   slab.material = slabMat
 
-  // Add the walls into the terrain density as undiggable solid
-  terrain.addBox(x, surfY, z - wallThick / 2, wallLength, wallHeight, wallThick, 50)
-  terrain.addBox(x - wallThick / 2, surfY, z, wallThick, wallHeight, wallLength, 50)
+  // Mark the foundation area as solid in terrain so it can't be dug under
+  terrain.addBox(x - 4, surfY - 3, z - 4, wallLength + 8, 3, wallLength + 8, 50)
 
   return parent
 }

@@ -1,0 +1,1 @@
+import{Qn as e}from"./index-Cijigpz2.js";export{e as lightProxyPixelShaderWGSL};

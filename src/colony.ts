@@ -15,7 +15,7 @@ import type { Terrain } from './terrain'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const ANT_SCALE = 2.16
-const QUEEN_SCALE = 4.0
+const QUEEN_SCALE = ANT_SCALE * 2  // queen is 2x the player size
 const EGG_HATCH_TIME = 30       // seconds until egg hatches
 const EGG_LAY_INTERVAL = 60     // seconds between egg lays
 const FOOD_BOUNCE_GRAVITY = -40
@@ -568,35 +568,49 @@ export class Colony {
     // Carve the nest: tunnel from surface down to chamber
     this.carveNest(terrain)
 
-    // Place queen in the chamber
-    this.queen = new AntQueen(scene, nestX, this.nestY + 1, nestZ, isEnemy)
+    // Place queen in the chamber (at the END of the tunnel, where the chamber was carved)
+    const chamberX = this.getChamberX()
+    this.queen = new AntQueen(scene, chamberX, this.nestY + 2, nestZ, isEnemy)
+  }
+
+  /** Get the X position of the queen's chamber */
+  private getChamberX(): number {
+    const tunnelLength = Math.abs(this.entranceY - this.nestY)
+    const tunnelDx = tunnelLength * 0.6
+    return this.nestX + tunnelDx * (this.isEnemy ? -1 : 1)
   }
 
   private carveNest(terrain: Terrain): void {
-    // Carve a sloping tunnel from the surface to the queen chamber
-    // The tunnel goes at a nice ~30 degree angle
-    const surfY = this.entranceY
+    // Carve a sloping tunnel from the surface down to the queen chamber.
+    // Start slightly below ground so the entrance doesn't gouge the surface.
+    const surfY = this.entranceY - 2  // start just below surface
     const depth = this.nestY
-    const tunnelLength = Math.abs(surfY - depth)
+    const totalDrop = surfY - depth    // positive value (e.g. 98)
+    const tunnelDx = totalDrop * 0.6   // horizontal spread for a gentle ~30° slope
 
-    // Tunnel slopes in X direction
-    const tunnelDx = tunnelLength * 0.6 // horizontal spread for gentle slope
-    const steps = 40
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps
-      const x = this.nestX + tunnelDx * t * (this.isEnemy ? -1 : 1)
-      const y = surfY - (surfY - depth) * t
-      const z = this.nestZ + Math.sin(t * Math.PI * 2) * 8 // slight S-curve
-      terrain.carveTunnel(
-        i === 0 ? this.nestX : this.nestX + tunnelDx * ((i - 1) / steps) * (this.isEnemy ? -1 : 1),
-        i === 0 ? surfY : surfY - (surfY - depth) * ((i - 1) / steps),
-        i === 0 ? this.nestZ : this.nestZ + Math.sin(((i - 1) / steps) * Math.PI * 2) * 8,
-        x, y, z, 8,
-      )
+    const steps = 50
+    const dir = this.isEnemy ? -1 : 1
+    for (let i = 0; i < steps; i++) {
+      const t0 = i / steps
+      const t1 = (i + 1) / steps
+      // X moves outward from nest entrance
+      const x0 = this.nestX + tunnelDx * t0 * dir
+      const x1 = this.nestX + tunnelDx * t1 * dir
+      // Y goes straight down
+      const y0 = surfY - totalDrop * t0
+      const y1 = surfY - totalDrop * t1
+      // Z has a gentle S-curve
+      const z0 = this.nestZ + Math.sin(t0 * Math.PI * 2) * 6
+      const z1 = this.nestZ + Math.sin(t1 * Math.PI * 2) * 6
+      terrain.carveTunnel(x0, y0, z0, x1, y1, z1, 7)
     }
 
+    // Carve a small entrance hole at the surface so you can walk in
+    terrain.carveChamber(this.nestX, this.entranceY - 1, this.nestZ, 8)
+
     // Carve the queen's chamber (wider area at the bottom)
-    terrain.carveChamber(this.nestX + tunnelDx * (this.isEnemy ? -1 : 1) * 0.95, this.nestY, this.nestZ, 15)
+    const chamberX = this.getChamberX()
+    terrain.carveChamber(chamberX, this.nestY, this.nestZ, 18)
   }
 
   update(dt: number, foods: Food[], trail: TrailSystem): number {

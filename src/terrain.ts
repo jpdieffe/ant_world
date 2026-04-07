@@ -109,17 +109,21 @@ export class Terrain {
     const dx = x2 - x1, dy = y2 - y1, dz = z2 - z1
     const length = Math.sqrt(dx * dx + dy * dy + dz * dz)
     const steps = Math.max(1, Math.ceil(length / (radius * 0.5)))
+    const dirtyChunks = new Set<string>()
     for (let i = 0; i <= steps; i++) {
       const t = i / steps
       const cx = x1 + dx * t
       const cy = y1 + dy * t
       const cz = z1 + dz * t
-      for (const [, chunk] of this.chunks) {
+      for (const [key, chunk] of this.chunks) {
         if (chunk.intersectsSphere(cx, cy, cz, radius)) {
           chunk.subtractSphere(cx, cy, cz, radius, 8)
-          chunk.rebuild()
+          dirtyChunks.add(key)
         }
       }
+    }
+    for (const key of dirtyChunks) {
+      this.chunks.get(key)?.rebuild()
     }
   }
 
@@ -127,22 +131,30 @@ export class Terrain {
    * Carve a spherical chamber in the terrain.
    */
   carveChamber(x: number, y: number, z: number, radius: number): void {
-    // Carve with multiple overlapping spheres for a more rounded shape
-    const steps = Math.ceil(radius / 3)
-    for (let dx = -steps; dx <= steps; dx++) {
-      for (let dz = -steps; dz <= steps; dz++) {
-        const ox = dx * (radius / steps) * 0.4
-        const oz = dz * (radius / steps) * 0.4
-        const dist = Math.sqrt(ox * ox + oz * oz)
-        if (dist < radius * 0.6) {
-          for (const [, chunk] of this.chunks) {
-            if (chunk.intersectsSphere(x + ox, y, z + oz, radius)) {
-              chunk.subtractSphere(x + ox, y, z + oz, radius, 8)
-              chunk.rebuild()
-            }
-          }
+    const dirtyChunks = new Set<string>()
+    // Carve with one large central sphere plus radial offsets for a rounder chamber
+    for (const [key, chunk] of this.chunks) {
+      if (chunk.intersectsSphere(x, y, z, radius)) {
+        chunk.subtractSphere(x, y, z, radius, 10)
+        dirtyChunks.add(key)
+      }
+    }
+    // Additional smaller spheres around the edges to smooth it out
+    const offsets = [
+      [radius * 0.4, 0, 0], [-radius * 0.4, 0, 0],
+      [0, 0, radius * 0.4], [0, 0, -radius * 0.4],
+      [0, radius * 0.3, 0], [0, -radius * 0.3, 0],
+    ]
+    for (const [ox, oy, oz] of offsets) {
+      for (const [key, chunk] of this.chunks) {
+        if (chunk.intersectsSphere(x + ox, y + oy, z + oz, radius * 0.7)) {
+          chunk.subtractSphere(x + ox, y + oy, z + oz, radius * 0.7, 10)
+          dirtyChunks.add(key)
         }
       }
+    }
+    for (const key of dirtyChunks) {
+      this.chunks.get(key)?.rebuild()
     }
   }
 

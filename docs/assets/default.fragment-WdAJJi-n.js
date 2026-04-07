@@ -1,0 +1,1 @@
+import{Mn as e}from"./index-Cijigpz2.js";export{e as defaultPixelShader};
