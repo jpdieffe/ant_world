@@ -1,1 +1,0 @@
-import{xo as e}from"./index-DnTSkkLb.js";export{e as gaussianSplattingPixelShaderWGSL};

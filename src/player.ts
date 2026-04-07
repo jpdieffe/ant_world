@@ -418,9 +418,9 @@ export class Player {
     }
 
     // ── World floor safety net ──────────────────────────────────────────────
-    if (this.position.y < -35) {
+    if (this.position.y < -205) {
       const safeSurf = this.terrain.getSurfaceY(this.position.x, this.position.z)
-      if (safeSurf > -28) {
+      if (safeSurf > -198) {
         this.position.y = safeSurf + 1
       } else {
         this.position.set(0, this.terrain.getSurfaceY(0, 0) + 2, 0)

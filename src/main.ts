@@ -17,6 +17,8 @@ import { RemotePlayer } from './remote'
 import { generateLevel } from './level'
 import { Enemy } from './enemy'
 import { Critter, CritterType } from './critter'
+import { Colony, Food, TrailSystem } from './colony'
+import { buildEnvironment } from './structures'
 
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 const network = new Network()
@@ -107,8 +109,8 @@ async function startGame() {
   try {
     terrain = new Terrain(scene)
 
-    const bedrock = MeshBuilder.CreateGround('bedrock', { width: 1000, height: 1000 }, scene)
-    bedrock.position.y = -30.5
+    const bedrock = MeshBuilder.CreateGround('bedrock', { width: 1200, height: 1200 }, scene)
+    bedrock.position.y = -200.5
     const bedrockMat = new StandardMaterial('bedrockMat', scene)
     bedrockMat.diffuseColor = new Color3(0.30, 0.20, 0.12)
     bedrockMat.specularColor = new Color3(0, 0, 0)
@@ -157,6 +159,35 @@ async function startGame() {
   let critters: Critter[] = []
   let roundActive = false
   let lastRoundStartMs = 0
+  let foods: Food[] = []
+  let playerColony: Colony | null = null
+  let enemyColony: Colony | null = null
+  let trail = new TrailSystem(scene)
+  let structures: any[] = []
+  let score = 0
+  let trailDropping = false
+  let attackCooldown = 0
+  const ATTACK_INTERVAL = 0.3
+  const ATTACK_RANGE = 6
+  const ATTACK_DAMAGE = 10
+
+  // Score HUD
+  const scoreEl = document.getElementById('scoreHud')!
+  const queenHealthEl = document.getElementById('queenHealthHud')!
+  function updateScoreHud() {
+    scoreEl.textContent = `Score: ${score}`
+    if (playerColony) {
+      queenHealthEl.textContent = `Queen HP: ${Math.max(0, Math.round(playerColony.queen.health))}/${playerColony.queen.maxHealth}`
+    }
+  }
+
+  // R key for trail
+  window.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'r') trailDropping = true
+  })
+  window.addEventListener('keyup', (e) => {
+    if (e.key.toLowerCase() === 'r') trailDropping = false
+  })
 
   function startRound(round: number) {
     // Debounce — prevent double-triggers when both players detect the same event
@@ -170,13 +201,33 @@ async function startGame() {
     // Reset terrain
     if (terrain) terrain.reset()
 
-    // Dispose old enemies
+    // Dispose old systems
     for (const e of enemies) e.dispose()
     enemies = []
-
-    // Dispose old critters
     for (const c of critters) c.dispose()
     critters = []
+    for (const f of foods) f.dispose()
+    foods = []
+    playerColony?.dispose()
+    enemyColony?.dispose()
+    trail.dispose()
+    trail = new TrailSystem(scene)
+    for (const s of structures) if (s.dispose) s.dispose()
+    structures = []
+    score = 0
+
+    // Build environment structures (house corner, brick paths)
+    structures = buildEnvironment(scene, terrain!)
+
+    // === Player Colony (near center, slight offset) ===
+    const pNestX = -60
+    const pNestZ = -60
+    playerColony = new Colony(scene, terrain!, pNestX, pNestZ, false)
+
+    // === Enemy Red Ant Colony (far side of map) ===
+    const eNestX = 250
+    const eNestZ = 250
+    enemyColony = new Colony(scene, terrain!, eNestX, eNestZ, true)
 
     // Spawn critters scattered across the map
     const CRITTER_TYPES: [CritterType, number][] = [
@@ -193,18 +244,19 @@ async function startGame() {
     // Generate level (use enemy spawn positions; flag position ignored)
     const level = generateLevel(round, terrain!.worldMinX, terrain!.worldMaxX, terrain!.worldMinZ, terrain!.worldMaxZ)
 
-    // Spawn enemies
+    // Spawn enemies (bug enemies, not ant enemies)
     for (const sp of level.enemySpawns) {
       enemies.push(new Enemy(scene, terrain!, sp.x, sp.z, sp.type))
     }
 
-    // Reset player position
+    // Reset player position near nest entrance
     if (player) {
-      const spawnY = terrain!.getSurfaceY(level.playerSpawnX, level.playerSpawnZ) + 2
-      player.resetPosition(level.playerSpawnX, spawnY, level.playerSpawnZ)
+      const spawnY = terrain!.getSurfaceY(pNestX, pNestZ) + 2
+      player.resetPosition(pNestX + 10, spawnY, pNestZ + 10)
     }
 
     roundActive = true
+    updateScoreHud()
 
     // Host sends round to joiner so they spawn enemies too
     if (network.isConnected()) {
@@ -268,6 +320,75 @@ async function startGame() {
           }
         } else {
           digCooldown = 0
+        }
+
+        // ── Trail dropping (R key) ─────────────────────────────────────────
+        if (trailDropping && player) {
+          trail.dropPoint(player.position.clone())
+        }
+        trail.update(dt)
+
+        // ── Attack critters (left click / auto-attack nearby) ──────────────
+        attackCooldown -= dt
+        if (digging && attackCooldown <= 0) {
+          attackCooldown = ATTACK_INTERVAL
+          // Check if any critter is in attack range
+          for (const c of critters) {
+            if (c.dead) continue
+            if (Vector3.Distance(player.position, c.position) < ATTACK_RANGE) {
+              c.takeDamage(ATTACK_DAMAGE)
+              if (c.dead) {
+                // Drop food where critter died
+                const numFood = 1 + Math.floor(Math.random() * 3)
+                for (let fi = 0; fi < numFood; fi++) {
+                  foods.push(new Food(scene, c.position.x, c.position.y + 1, c.position.z))
+                }
+              }
+              break // one target at a time
+            }
+          }
+          // Also check enemy red ants
+          if (enemyColony) {
+            for (const ally of enemyColony.allies) {
+              if (Vector3.Distance(player.position, ally.position) < ATTACK_RANGE) {
+                // Red ants take damage and disappear
+                ally.dispose()
+                enemyColony.allies.splice(enemyColony.allies.indexOf(ally), 1)
+                foods.push(new Food(scene, ally.position.x, ally.position.y + 1, ally.position.z))
+                break
+              }
+            }
+            // Attack enemy queen if close enough
+            if (enemyColony.queen.isAlive() && Vector3.Distance(player.position, enemyColony.queen.position) < ATTACK_RANGE * 1.5) {
+              enemyColony.queen.takeDamage(ATTACK_DAMAGE)
+              if (!enemyColony.queen.isAlive()) {
+                flashMessage('🎉 VICTORY! Enemy colony destroyed!', 5000, '#4f4')
+              }
+            }
+          }
+        }
+
+        // ── Update food physics ────────────────────────────────────────────
+        for (const f of foods) f.update(dt, terrain)
+
+        // ── Update colonies ────────────────────────────────────────────────
+        if (playerColony) {
+          const delivered = playerColony.update(dt, foods, trail)
+          if (delivered > 0) {
+            score += delivered * 10
+            updateScoreHud()
+          }
+        }
+        if (enemyColony) {
+          enemyColony.update(dt, foods, trail)
+        }
+
+        // ── Remove dead critters ───────────────────────────────────────────
+        for (let i = critters.length - 1; i >= 0; i--) {
+          if (critters[i].dead) {
+            critters[i].dispose()
+            critters.splice(i, 1)
+          }
         }
 
         // ── Enemy AI ───────────────────────────────────────────────────────

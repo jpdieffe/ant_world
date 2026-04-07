@@ -1,1 +1,0 @@
-import{yn as e}from"./index-DnTSkkLb.js";export{e as particlesVertexShader};

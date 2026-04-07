@@ -18,10 +18,10 @@ const CHUNK_SIZE = 80
 const CELL_SIZE = CHUNK_SIZE / (CHUNK_SAMPLES - 1)
 /** How many chunks along each horizontal axis  (total area = GRID × CHUNK_SIZE = 640) */
 const GRID = 8
-/** Vertical samples — enough for ~30m below ground + ~10m above */
-const VERT_SAMPLES = 24
+/** Vertical samples — enough for ~200m below ground + ~10m above */
+const VERT_SAMPLES = 160
 /** Y offset: grid starts at this Y, surface should be near y=0 */
-const Y_OFFSET = -30
+const Y_OFFSET = -200
 /** Dig radius in world units */
 const DIG_RADIUS = 10
 /** Dig strength (how much density is removed per click) */
@@ -99,6 +99,51 @@ export class Terrain {
       }
     }
     return modified
+  }
+
+  /**
+   * Carve a tunnel (series of spheres) between two world positions.
+   * Used for pre-built nest tunnels.
+   */
+  carveTunnel(x1: number, y1: number, z1: number, x2: number, y2: number, z2: number, radius: number): void {
+    const dx = x2 - x1, dy = y2 - y1, dz = z2 - z1
+    const length = Math.sqrt(dx * dx + dy * dy + dz * dz)
+    const steps = Math.max(1, Math.ceil(length / (radius * 0.5)))
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps
+      const cx = x1 + dx * t
+      const cy = y1 + dy * t
+      const cz = z1 + dz * t
+      for (const [, chunk] of this.chunks) {
+        if (chunk.intersectsSphere(cx, cy, cz, radius)) {
+          chunk.subtractSphere(cx, cy, cz, radius, 8)
+          chunk.rebuild()
+        }
+      }
+    }
+  }
+
+  /**
+   * Carve a spherical chamber in the terrain.
+   */
+  carveChamber(x: number, y: number, z: number, radius: number): void {
+    // Carve with multiple overlapping spheres for a more rounded shape
+    const steps = Math.ceil(radius / 3)
+    for (let dx = -steps; dx <= steps; dx++) {
+      for (let dz = -steps; dz <= steps; dz++) {
+        const ox = dx * (radius / steps) * 0.4
+        const oz = dz * (radius / steps) * 0.4
+        const dist = Math.sqrt(ox * ox + oz * oz)
+        if (dist < radius * 0.6) {
+          for (const [, chunk] of this.chunks) {
+            if (chunk.intersectsSphere(x + ox, y, z + oz, radius)) {
+              chunk.subtractSphere(x + ox, y, z + oz, radius, 8)
+              chunk.rebuild()
+            }
+          }
+        }
+      }
+    }
   }
 
   /**

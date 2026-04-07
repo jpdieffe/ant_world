@@ -112,7 +112,7 @@
       transform: translateX(-50%);
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-DnTSkkLb.js"></script>
+  <script type="module" crossorigin src="./assets/index-D3VmVWK5.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/math.scalar.functions-PeE1O4gN.js">
   <link rel="modulepreload" crossorigin href="./assets/observable-DKD4yN_b.js">
   <link rel="modulepreload" crossorigin href="./assets/engineStore-CtIeXrE5.js">
@@ -336,6 +336,7 @@
   <!-- Lobby / click to play -->
   <div id="lobby">
     <h1>🐜 Ant World</h1>
+    <p style="font-size:0.75rem; opacity:0.4;">v0.1</p>
 
     <button id="playBtn">Solo Play</button>
 
@@ -346,7 +347,7 @@
     </div>
 
     <p id="lobbyMsg"></p>
-    <p>WASD move &nbsp;·&nbsp; Space jump &nbsp;·&nbsp; Click to aim &nbsp;·&nbsp; Right-click dig &nbsp;·&nbsp; 1/2/3/4 camera mode</p>
+    <p>WASD move &nbsp;·&nbsp; Space jump &nbsp;·&nbsp; Click to aim &nbsp;·&nbsp; Right-click dig/attack &nbsp;·&nbsp; Hold R = trail &nbsp;·&nbsp; 1/2/3/4 camera</p>
   </div>
 
   <!-- Screen crosshair -->
@@ -354,6 +355,15 @@
 
   <!-- Round HUD -->
   <div id="roundHud" style="position:fixed; top:1.5rem; right:1.5rem; background:rgba(0,10,40,0.85); border:1px solid #6af; border-radius:10px; padding:0.4rem 1.2rem; color:#9df; font:bold 1rem system-ui,sans-serif; z-index:15; letter-spacing:0.04em;">Round 1</div>
+
+  <!-- Score HUD -->
+  <div id="scoreHud" style="position:fixed; top:4rem; right:1.5rem; background:rgba(0,10,40,0.85); border:1px solid #4f4; border-radius:10px; padding:0.4rem 1.2rem; color:#9f9; font:bold 1rem system-ui,sans-serif; z-index:15; letter-spacing:0.04em;">Score: 0</div>
+
+  <!-- Queen Health HUD -->
+  <div id="queenHealthHud" style="position:fixed; top:6.5rem; right:1.5rem; background:rgba(0,10,40,0.85); border:1px solid #fa4; border-radius:10px; padding:0.4rem 1.2rem; color:#fc6; font:bold 0.9rem system-ui,sans-serif; z-index:15; letter-spacing:0.04em;">Queen HP: 100/100</div>
+
+  <!-- Trail hint -->
+  <div id="trailHint" style="position:fixed; top:9rem; right:1.5rem; background:rgba(0,10,40,0.75); border:1px solid #6cf; border-radius:10px; padding:0.3rem 0.8rem; color:#8cf; font:0.78rem system-ui,sans-serif; z-index:15; opacity:0.7;">Hold R = leave trail</div>
 
   <!-- Round message overlay -->
   <div id="roundMsg" style="display:none; position:fixed; top:35%; left:50%; transform:translateX(-50%); background:rgba(0,10,40,0.92); border:1px solid #ffe066; border-radius:12px; padding:0.8rem 2.4rem; font:bold 1.3rem system-ui,sans-serif; z-index:20; text-align:center; white-space:nowrap; letter-spacing:0.04em;"></div>
@@ -366,7 +376,7 @@
 
   <!-- Controls hint -->
   <div id="hud">
-    WASD / Arrows &nbsp;&middot;&nbsp; Space to jump &nbsp;&middot;&nbsp; Click to aim (ESC to release) &nbsp;&middot;&nbsp; Right-click to dig &nbsp;&middot;&nbsp; 1/2/3/4 = camera mode
+    WASD / Arrows &nbsp;&middot;&nbsp; Space to jump &nbsp;&middot;&nbsp; Click to aim (ESC to release) &nbsp;&middot;&nbsp; Right-click to dig/attack &nbsp;&middot;&nbsp; Hold R = leave trail &nbsp;&middot;&nbsp; 1/2/3/4 = camera
   </div>
 
 </body>

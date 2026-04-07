@@ -19,14 +19,15 @@ interface CritterConfig {
   pauseMax: number
   /** If false, uses idle.glb for both idle and walking (no walk.glb available) */
   hasWalk?: boolean
+  health: number
 }
 
 const CONFIGS: Record<CritterType, CritterConfig> = {
-  spider:    { scale: 30, speed: 6,   wanderRadius: 80, pauseMin: 0.5, pauseMax: 2,   hasWalk: true  },
-  pillbug:   { scale: 6,  speed: 2,   wanderRadius: 50, pauseMin: 2,   pauseMax: 5,   hasWalk: true  },
-  mantis:    { scale: 22, speed: 5,   wanderRadius: 100, pauseMin: 1,  pauseMax: 4,   hasWalk: true  },
-  ladybug:   { scale: 8,  speed: 4,   wanderRadius: 60, pauseMin: 1,   pauseMax: 3,   hasWalk: true  },
-  cockroach: { scale: 14, speed: 8,   wanderRadius: 120, pauseMin: 0.3,pauseMax: 1.5, hasWalk: false },
+  spider:    { scale: 30, speed: 6,   wanderRadius: 80, pauseMin: 0.5, pauseMax: 2,   hasWalk: true,  health: 30  },
+  pillbug:   { scale: 6,  speed: 2,   wanderRadius: 50, pauseMin: 2,   pauseMax: 5,   hasWalk: true,  health: 20  },
+  mantis:    { scale: 22, speed: 5,   wanderRadius: 100, pauseMin: 1,  pauseMax: 4,   hasWalk: true,  health: 50  },
+  ladybug:   { scale: 8,  speed: 4,   wanderRadius: 60, pauseMin: 1,   pauseMax: 3,   hasWalk: true,  health: 15  },
+  cockroach: { scale: 14, speed: 8,   wanderRadius: 120, pauseMin: 0.3,pauseMax: 1.5, hasWalk: false, health: 10  },
 }
 
 function meshBottomY(meshes: AbstractMesh[]): number {
@@ -55,6 +56,8 @@ export class Critter {
   private targetX = 0
   private targetZ = 0
   facingY = 0
+  health: number
+  dead = false
 
   private readonly cfg: CritterConfig
   private readonly spawnX: number
@@ -67,6 +70,7 @@ export class Critter {
     private type: CritterType,
   ) {
     this.cfg = CONFIGS[type]
+    this.health = this.cfg.health
     this.spawnX = x
     this.spawnZ = z
     const surfY = terrain.getSurfaceY(x, z)
@@ -181,6 +185,11 @@ export class Critter {
       activeRoot.position.set(this.position.x, this.position.y - activeYOff, this.position.z)
       activeRoot.rotation.y = this.facingY
     }
+  }
+
+  takeDamage(amount: number): void {
+    this.health -= amount
+    if (this.health <= 0) this.dead = true
   }
 
   dispose(): void {
