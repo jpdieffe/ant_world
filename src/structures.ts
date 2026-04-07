@@ -103,16 +103,6 @@ export function createBrickPath(
     brick.rotation.y = angle
     brick.material = brickMat
     brick.parent = parent
-
-    // Add to terrain density so it can't be dug through
-    const perpX = Math.cos(angle) * width / 2
-    const perpZ = -Math.sin(angle) * width / 2
-    const halfSeg = segLen / 2
-    const minX = bx - Math.abs(perpX) - Math.abs(Math.sin(angle) * halfSeg)
-    const minZ = bz - Math.abs(perpZ) - Math.abs(Math.cos(angle) * halfSeg)
-    const w = Math.abs(perpX) * 2 + Math.abs(Math.sin(angle) * segLen)
-    const d = Math.abs(perpZ) * 2 + Math.abs(Math.cos(angle) * segLen)
-    terrain.addBox(minX, surfY - 1, minZ, Math.max(w, width), 4, Math.max(d, segLen), 50)
   }
 
   return parent

@@ -115,9 +115,12 @@ export class Terrain {
       const cx = x1 + dx * t
       const cy = y1 + dy * t
       const cz = z1 + dz * t
+      // Strength must exceed the local density. At depth Y, density ≈ -Y.
+      // Add generous margin so the sphere fully clears even at edges.
+      const localDensity = Math.abs(cy) + 10
       for (const [key, chunk] of this.chunks) {
         if (chunk.intersectsSphere(cx, cy, cz, radius)) {
-          chunk.subtractSphere(cx, cy, cz, radius, 8)
+          chunk.subtractSphere(cx, cy, cz, radius, localDensity)
           dirtyChunks.add(key)
         }
       }
@@ -132,10 +135,12 @@ export class Terrain {
    */
   carveChamber(x: number, y: number, z: number, radius: number): void {
     const dirtyChunks = new Set<string>()
+    // Strength must exceed the local density at this depth
+    const localDensity = Math.abs(y) + 20
     // Carve with one large central sphere plus radial offsets for a rounder chamber
     for (const [key, chunk] of this.chunks) {
       if (chunk.intersectsSphere(x, y, z, radius)) {
-        chunk.subtractSphere(x, y, z, radius, 10)
+        chunk.subtractSphere(x, y, z, radius, localDensity)
         dirtyChunks.add(key)
       }
     }
@@ -148,7 +153,7 @@ export class Terrain {
     for (const [ox, oy, oz] of offsets) {
       for (const [key, chunk] of this.chunks) {
         if (chunk.intersectsSphere(x + ox, y + oy, z + oz, radius * 0.7)) {
-          chunk.subtractSphere(x + ox, y + oy, z + oz, radius * 0.7, 10)
+          chunk.subtractSphere(x + ox, y + oy, z + oz, radius * 0.7, localDensity)
           dirtyChunks.add(key)
         }
       }

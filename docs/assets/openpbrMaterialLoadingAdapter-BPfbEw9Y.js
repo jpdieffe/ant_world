@@ -1,1 +1,0 @@
-import{r as e}from"./index-Cijigpz2.js";export{e as OpenPBRMaterialLoadingAdapter};

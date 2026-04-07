@@ -1,0 +1,1 @@
+import{sr as e}from"./index-SYzWRJAb.js";export{e as shadowMapFragmentSoftTransparentShadowWGSL};

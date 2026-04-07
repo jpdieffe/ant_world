@@ -1,0 +1,1 @@
+import{Qn as e}from"./index-SYzWRJAb.js";export{e as lightProxyPixelShaderWGSL};
